@@ -23,13 +23,23 @@
  * SOFTWARE.
  */
 
-#include <glib.h>
 #include <stdbool.h>
-
-#include "common/macros.h"
 
 /* Sentinel for an option descriptor array */
 #define BT_ARGPAR_OPT_DESCR_SENTINEL	{ -1, '\0', NULL, false }
+
+/*
+ * ARGPAR_HIDDEN: if argpar is used in some shared library, we don't want them
+ * to be exported by that library, so mark them as "hidden".
+ *
+ * On Windows, symbols are local unless explicitly exported,
+ * see https://gcc.gnu.org/wiki/Visibility
+ */
+#if defined(_WIN32) || defined(__CYGWIN__)
+#define ARGPAR_HIDDEN
+#else
+#define ARGPAR_HIDDEN __attribute__((visibility("hidden")))
+#endif
 
 /* Option descriptor */
 struct bt_argpar_opt_descr {
@@ -88,13 +98,24 @@ struct bt_argpar_item_non_opt {
 	unsigned int non_opt_index;
 };
 
+struct bt_argpar_item_array {
+	/* Array of `struct bt_argpar_item *`, or `NULL` on error */
+	struct bt_argpar_item **items;
+
+	/* Number of used slots in `data`. */
+	unsigned int n_items;
+
+	/* Number of allocated slots in `data`. */
+	unsigned int n_alloc;
+};
+
 /* What is returned by bt_argpar_parse() */
 struct bt_argpar_parse_ret {
 	/* Array of `struct bt_argpar_item *`, or `NULL` on error */
-	GPtrArray *items;
+	struct bt_argpar_item_array *items;
 
 	/* Error string, or `NULL` if none */
-	GString *error;
+	char *error;
 
 	/* Number of original arguments (`argv`) ingested */
 	unsigned int ingested_orig_args;
@@ -194,7 +215,7 @@ struct bt_argpar_parse_ret {
  * You can finalize the returned structure with
  * bt_argpar_parse_ret_fini().
  */
-BT_HIDDEN
+ARGPAR_HIDDEN
 struct bt_argpar_parse_ret bt_argpar_parse(unsigned int argc,
 		const char * const *argv,
 		const struct bt_argpar_opt_descr *descrs,
@@ -206,7 +227,7 @@ struct bt_argpar_parse_ret bt_argpar_parse(unsigned int argc,
  * It is safe to call bt_argpar_parse() multiple times with the same
  * structure.
  */
-BT_HIDDEN
+ARGPAR_HIDDEN
 void bt_argpar_parse_ret_fini(struct bt_argpar_parse_ret *ret);
 
 #endif /* BABELTRACE_ARGPAR_H */

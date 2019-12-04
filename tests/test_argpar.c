@@ -15,13 +15,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <glib.h>
 
 #include "tap/tap.h"
-#include "common/assert.h"
-
 #include "argpar/argpar.h"
 
 /*
@@ -48,8 +47,8 @@ void test_succeed(const char *cmdline,
 	gchar **argv = g_strsplit(cmdline, " ", 0);
 	unsigned int i;
 
-	BT_ASSERT(argv);
-	BT_ASSERT(res_str);
+	assert(argv);
+	assert(res_str);
 	parse_ret = bt_argpar_parse(g_strv_length(argv),
 		(const char * const *) argv, descrs, false);
 	ok(parse_ret.items,
@@ -70,8 +69,8 @@ void test_succeed(const char *cmdline,
 		goto end;
 	}
 
-	for (i = 0; i < parse_ret.items->len; i++) {
-		const struct bt_argpar_item *arg = parse_ret.items->pdata[i];
+	for (i = 0; i < parse_ret.items->n_items; i++) {
+		const struct bt_argpar_item *arg = parse_ret.items->items[i];
 
 		switch (arg->type) {
 		case BT_ARGPAR_ITEM_TYPE_OPT:
@@ -518,12 +517,12 @@ void test_fail(const char *cmdline, const char *expected_error,
 		goto end;
 	}
 
-	ok(strcmp(expected_error, parse_ret.error->str) == 0,
+	ok(strcmp(expected_error, parse_ret.error) == 0,
 		"bt_argpar_parse() writes the expected error string "
 		"for command line `%s`", cmdline);
-	if (strcmp(expected_error, parse_ret.error->str) != 0) {
+	if (strcmp(expected_error, parse_ret.error) != 0) {
 		diag("Expected: `%s`", expected_error);
-		diag("Got:      `%s`", parse_ret.error->str);
+		diag("Got:      `%s`", parse_ret.error);
 	}
 
 end:
