@@ -69,7 +69,7 @@ char *argpar_asprintf(const char *fmt, ...)
 {
 	va_list args;
 	char *str;
-	
+
 	va_start(args, fmt);
 	str = argpar_vasprintf(fmt, args);
 	va_end(args);
@@ -101,7 +101,7 @@ bool argpar_string_append_printf(char **str, const char *fmt, ...)
 		success = false;
 		goto end;
 	}
-	
+
 	free(*str);
 	*str = new_str;
 
@@ -145,7 +145,7 @@ bool push_item(struct bt_argpar_item_array * const array,
 		unsigned int new_n_alloc = array->n_alloc * 2;
 		struct bt_argpar_item **new_items;
 
-		new_items = argpar_realloc(array->items, 
+		new_items = argpar_realloc(array->items,
 			struct bt_argpar_item *, new_n_alloc);
 		if (!new_items) {
 			success = false;
