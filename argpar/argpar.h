@@ -102,10 +102,10 @@ struct bt_argpar_item_array {
 	/* Array of `struct bt_argpar_item *`, or `NULL` on error */
 	struct bt_argpar_item **items;
 
-	/* Number of used slots in `data`. */
+	/* Number of used slots in `items`. */
 	unsigned int n_items;
 
-	/* Number of allocated slots in `data`. */
+	/* Number of allocated slots in `items`. */
 	unsigned int n_alloc;
 };
 
