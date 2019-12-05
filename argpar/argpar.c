@@ -114,14 +114,14 @@ end:
 }
 
 static
-void destroy_item(struct bt_argpar_item * const item)
+void destroy_item(struct argpar_item * const item)
 {
 	if (!item) {
 		goto end;
 	}
 
-	if (item->type == BT_ARGPAR_ITEM_TYPE_OPT) {
-		struct bt_argpar_item_opt * const opt_item = (void *) item;
+	if (item->type == ARGPAR_ITEM_TYPE_OPT) {
+		struct argpar_item_opt * const opt_item = (void *) item;
 
 		free((void *) opt_item->arg);
 	}
@@ -133,8 +133,8 @@ end:
 }
 
 static
-bool push_item(struct bt_argpar_item_array * const array,
-		struct bt_argpar_item * const item)
+bool push_item(struct argpar_item_array * const array,
+		struct argpar_item * const item)
 {
 	bool success;
 
@@ -143,10 +143,10 @@ bool push_item(struct bt_argpar_item_array * const array,
 
 	if (array->n_items == array->n_alloc) {
 		unsigned int new_n_alloc = array->n_alloc * 2;
-		struct bt_argpar_item **new_items;
+		struct argpar_item **new_items;
 
 		new_items = argpar_realloc(array->items,
-			struct bt_argpar_item *, new_n_alloc);
+			struct argpar_item *, new_n_alloc);
 		if (!new_items) {
 			success = false;
 			goto end;
@@ -166,7 +166,7 @@ end:
 }
 
 static
-void destroy_item_array(struct bt_argpar_item_array * const array)
+void destroy_item_array(struct argpar_item_array * const array)
 {
 	if (array) {
 		unsigned int i;
@@ -181,17 +181,17 @@ void destroy_item_array(struct bt_argpar_item_array * const array)
 }
 
 static
-struct bt_argpar_item_array *new_item_array(void)
+struct argpar_item_array *new_item_array(void)
 {
-	struct bt_argpar_item_array *ret;
+	struct argpar_item_array *ret;
 	const int initial_size = 10;
 
-	ret = argpar_zalloc(struct bt_argpar_item_array);
+	ret = argpar_zalloc(struct argpar_item_array);
 	if (!ret) {
 		goto end;
 	}
 
-	ret->items = argpar_calloc(struct bt_argpar_item *, initial_size);
+	ret->items = argpar_calloc(struct argpar_item *, initial_size);
 	if (!ret->items) {
 		goto error;
 	}
@@ -209,18 +209,18 @@ end:
 }
 
 static
-struct bt_argpar_item_opt *create_opt_item(
-		const struct bt_argpar_opt_descr * const descr,
+struct argpar_item_opt *create_opt_item(
+		const struct argpar_opt_descr * const descr,
 		const char * const arg)
 {
-	struct bt_argpar_item_opt *opt_item =
-		argpar_zalloc(struct bt_argpar_item_opt);
+	struct argpar_item_opt *opt_item =
+		argpar_zalloc(struct argpar_item_opt);
 
 	if (!opt_item) {
 		goto end;
 	}
 
-	opt_item->base.type = BT_ARGPAR_ITEM_TYPE_OPT;
+	opt_item->base.type = ARGPAR_ITEM_TYPE_OPT;
 	opt_item->descr = descr;
 
 	if (arg) {
@@ -241,18 +241,18 @@ end:
 }
 
 static
-struct bt_argpar_item_non_opt *create_non_opt_item(const char * const arg,
+struct argpar_item_non_opt *create_non_opt_item(const char * const arg,
 		const unsigned int orig_index,
 		const unsigned int non_opt_index)
 {
-	struct bt_argpar_item_non_opt * const non_opt_item =
-		argpar_zalloc(struct bt_argpar_item_non_opt);
+	struct argpar_item_non_opt * const non_opt_item =
+		argpar_zalloc(struct argpar_item_non_opt);
 
 	if (!non_opt_item) {
 		goto end;
 	}
 
-	non_opt_item->base.type = BT_ARGPAR_ITEM_TYPE_NON_OPT;
+	non_opt_item->base.type = ARGPAR_ITEM_TYPE_NON_OPT;
 	non_opt_item->arg = arg;
 	non_opt_item->orig_index = orig_index;
 	non_opt_item->non_opt_index = non_opt_index;
@@ -262,11 +262,11 @@ end:
 }
 
 static
-const struct bt_argpar_opt_descr *find_descr(
-		const struct bt_argpar_opt_descr * const descrs,
+const struct argpar_opt_descr *find_descr(
+		const struct argpar_opt_descr * const descrs,
 		const char short_name, const char * const long_name)
 {
-	const struct bt_argpar_opt_descr *descr;
+	const struct argpar_opt_descr *descr;
 
 	for (descr = descrs; descr->short_name || descr->long_name; descr++) {
 		if (short_name && descr->short_name &&
@@ -293,8 +293,8 @@ enum parse_orig_arg_opt_ret {
 static
 enum parse_orig_arg_opt_ret parse_short_opts(const char * const short_opts,
 		const char * const next_orig_arg,
-		const struct bt_argpar_opt_descr * const descrs,
-		struct bt_argpar_parse_ret * const parse_ret,
+		const struct argpar_opt_descr * const descrs,
+		struct argpar_parse_ret * const parse_ret,
 		bool * const used_next_orig_arg)
 {
 	enum parse_orig_arg_opt_ret ret = PARSE_ORIG_ARG_OPT_RET_OK;
@@ -307,8 +307,8 @@ enum parse_orig_arg_opt_ret parse_short_opts(const char * const short_opts,
 
 	while (*short_opt_ch) {
 		const char *opt_arg = NULL;
-		const struct bt_argpar_opt_descr *descr;
-		struct bt_argpar_item_opt *opt_item;
+		const struct argpar_opt_descr *descr;
+		struct argpar_item_opt *opt_item;
 
 		/* Find corresponding option descriptor */
 		descr = find_descr(descrs, *short_opt_ch, NULL);
@@ -376,14 +376,14 @@ end:
 static
 enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		const char * const next_orig_arg,
-		const struct bt_argpar_opt_descr * const descrs,
-		struct bt_argpar_parse_ret * const parse_ret,
+		const struct argpar_opt_descr * const descrs,
+		struct argpar_parse_ret * const parse_ret,
 		bool * const used_next_orig_arg)
 {
 	const size_t max_len = 127;
 	enum parse_orig_arg_opt_ret ret = PARSE_ORIG_ARG_OPT_RET_OK;
-	const struct bt_argpar_opt_descr *descr;
-	struct bt_argpar_item_opt *opt_item;
+	const struct argpar_opt_descr *descr;
+	struct argpar_item_opt *opt_item;
 
 	/* Option's argument, if any */
 	const char *opt_arg = NULL;
@@ -472,8 +472,8 @@ end:
 static
 enum parse_orig_arg_opt_ret parse_orig_arg_opt(const char * const orig_arg,
 		const char * const next_orig_arg,
-		const struct bt_argpar_opt_descr * const descrs,
-		struct bt_argpar_parse_ret * const parse_ret,
+		const struct argpar_opt_descr * const descrs,
+		struct argpar_parse_ret * const parse_ret,
 		bool * const used_next_orig_arg)
 {
 	enum parse_orig_arg_opt_ret ret = PARSE_ORIG_ARG_OPT_RET_OK;
@@ -521,12 +521,12 @@ end:
 }
 
 ARGPAR_HIDDEN
-struct bt_argpar_parse_ret bt_argpar_parse(unsigned int argc,
+struct argpar_parse_ret argpar_parse(unsigned int argc,
 		const char * const *argv,
-		const struct bt_argpar_opt_descr * const descrs,
+		const struct argpar_opt_descr * const descrs,
 		bool fail_on_unknown_opt)
 {
-	struct bt_argpar_parse_ret parse_ret = { 0 };
+	struct argpar_parse_ret parse_ret = { 0 };
 	unsigned int i;
 	unsigned int non_opt_index = 0;
 
@@ -544,7 +544,7 @@ struct bt_argpar_parse_ret bt_argpar_parse(unsigned int argc,
 
 		if (orig_arg[0] != '-') {
 			/* Non-option argument */
-			struct bt_argpar_item_non_opt *non_opt_item =
+			struct argpar_item_non_opt *non_opt_item =
 				create_non_opt_item(orig_arg, i, non_opt_index);
 
 			if (!non_opt_item) {
@@ -612,7 +612,7 @@ end:
 }
 
 ARGPAR_HIDDEN
-void bt_argpar_parse_ret_fini(struct bt_argpar_parse_ret *ret)
+void argpar_parse_ret_fini(struct argpar_parse_ret *ret)
 {
 	ARGPAR_ASSERT(ret);
 

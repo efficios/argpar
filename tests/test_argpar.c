@@ -39,24 +39,24 @@
 static
 void test_succeed(const char *cmdline,
 		const char *expected_cmd_line,
-		const struct bt_argpar_opt_descr *descrs,
+		const struct argpar_opt_descr *descrs,
 		unsigned int expected_ingested_orig_args)
 {
-	struct bt_argpar_parse_ret parse_ret;
+	struct argpar_parse_ret parse_ret;
 	GString *res_str = g_string_new(NULL);
 	gchar **argv = g_strsplit(cmdline, " ", 0);
 	unsigned int i;
 
 	assert(argv);
 	assert(res_str);
-	parse_ret = bt_argpar_parse(g_strv_length(argv),
+	parse_ret = argpar_parse(g_strv_length(argv),
 		(const char * const *) argv, descrs, false);
 	ok(parse_ret.items,
-		"bt_argpar_parse() succeeds for command line `%s`", cmdline);
+		"argpar_parse() succeeds for command line `%s`", cmdline);
 	ok(!parse_ret.error,
-		"bt_argpar_parse() does not write an error for command line `%s`", cmdline);
+		"argpar_parse() does not write an error for command line `%s`", cmdline);
 	ok(parse_ret.ingested_orig_args == expected_ingested_orig_args,
-		"bt_argpar_parse() returns the correct number of ingested "
+		"argpar_parse() returns the correct number of ingested "
 		"original arguments for command line `%s`", cmdline);
 	if (parse_ret.ingested_orig_args != expected_ingested_orig_args) {
 		diag("Expected: %u    Got: %u", expected_ingested_orig_args,
@@ -64,18 +64,18 @@ void test_succeed(const char *cmdline,
 	}
 
 	if (!parse_ret.items) {
-		fail("bt_argpar_parse() returns the expected parsed arguments "
+		fail("argpar_parse() returns the expected parsed arguments "
 			"for command line `%s`", cmdline);
 		goto end;
 	}
 
 	for (i = 0; i < parse_ret.items->n_items; i++) {
-		const struct bt_argpar_item *arg = parse_ret.items->items[i];
+		const struct argpar_item *arg = parse_ret.items->items[i];
 
 		switch (arg->type) {
-		case BT_ARGPAR_ITEM_TYPE_OPT:
+		case ARGPAR_ITEM_TYPE_OPT:
 		{
-			const struct bt_argpar_item_opt *arg_opt =
+			const struct argpar_item_opt *arg_opt =
 				(const void *) arg;
 
 			if (arg_opt->descr->long_name) {
@@ -102,9 +102,9 @@ void test_succeed(const char *cmdline,
 
 			break;
 		}
-		case BT_ARGPAR_ITEM_TYPE_NON_OPT:
+		case ARGPAR_ITEM_TYPE_NON_OPT:
 		{
-			const struct bt_argpar_item_non_opt *arg_non_opt =
+			const struct argpar_item_non_opt *arg_non_opt =
 				(const void *) arg;
 
 			g_string_append_printf(res_str, "%s<%u,%u> ",
@@ -122,7 +122,7 @@ void test_succeed(const char *cmdline,
 	}
 
 	ok(strcmp(expected_cmd_line, res_str->str) == 0,
-		"bt_argpar_parse() returns the expected parsed arguments "
+		"argpar_parse() returns the expected parsed arguments "
 		"for command line `%s`", cmdline);
 	if (strcmp(expected_cmd_line, res_str->str) != 0) {
 		diag("Expected: `%s`", expected_cmd_line);
@@ -130,7 +130,7 @@ void test_succeed(const char *cmdline,
 	}
 
 end:
-	bt_argpar_parse_ret_fini(&parse_ret);
+	argpar_parse_ret_fini(&parse_ret);
 	g_string_free(res_str, TRUE);
 	g_strfreev(argv);
 }
@@ -140,8 +140,8 @@ void succeed_tests(void)
 {
 	/* No arguments */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+		const struct argpar_opt_descr descrs[] = {
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -152,9 +152,9 @@ void succeed_tests(void)
 
 	/* Single long option */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "salut", false },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -165,9 +165,9 @@ void succeed_tests(void)
 
 	/* Single short option */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'f', NULL, false },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -178,9 +178,9 @@ void succeed_tests(void)
 
 	/* Short and long option (aliases) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'f', "flaw", false },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -191,9 +191,9 @@ void succeed_tests(void)
 
 	/* Long option with argument (space form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "tooth", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -204,9 +204,9 @@ void succeed_tests(void)
 
 	/* Long option with argument (equal form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "polish", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -217,9 +217,9 @@ void succeed_tests(void)
 
 	/* Short option with argument (space form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'c', NULL, true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -230,9 +230,9 @@ void succeed_tests(void)
 
 	/* Short option with argument (glued form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'c', NULL, true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -243,9 +243,9 @@ void succeed_tests(void)
 
 	/* Short and long option (aliases) with argument (all forms) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'd', "dry", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -256,11 +256,11 @@ void succeed_tests(void)
 
 	/* Many short options, last one with argument (glued form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'd', NULL, false },
 			{ 0, 'e', NULL, false },
 			{ 0, 'f', NULL, true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -271,11 +271,11 @@ void succeed_tests(void)
 
 	/* Many options */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'd', NULL, false },
 			{ 0, 'e', "east", true },
 			{ 0, '\0', "mind", false },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -286,8 +286,8 @@ void succeed_tests(void)
 
 	/* Single non-option argument */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+		const struct argpar_opt_descr descrs[] = {
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -298,8 +298,8 @@ void succeed_tests(void)
 
 	/* Two non-option arguments */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+		const struct argpar_opt_descr descrs[] = {
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -310,10 +310,10 @@ void succeed_tests(void)
 
 	/* Single non-option argument mixed with options */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'd', NULL, false },
 			{ 0, '\0', "squeeze", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -324,9 +324,9 @@ void succeed_tests(void)
 
 	/* Unknown short option (space form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'd', NULL, true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -337,9 +337,9 @@ void succeed_tests(void)
 
 	/* Unknown short option (glued form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'd', NULL, true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -350,9 +350,9 @@ void succeed_tests(void)
 
 	/* Unknown long option (space form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "sink", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -363,9 +363,9 @@ void succeed_tests(void)
 
 	/* Unknown long option (equal form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "sink", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -376,9 +376,9 @@ void succeed_tests(void)
 
 	/* Unknown option before non-option argument */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "thumb", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -389,9 +389,9 @@ void succeed_tests(void)
 
 	/* Unknown option after non-option argument */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "thumb", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -402,9 +402,9 @@ void succeed_tests(void)
 
 	/* Valid `---opt` */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "-fuel", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -415,9 +415,9 @@ void succeed_tests(void)
 
 	/* Long option containing `=` in argument (equal form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "zebra", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -428,9 +428,9 @@ void succeed_tests(void)
 
 	/* Short option's argument starting with `-` (glued form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'z', NULL, true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -441,9 +441,9 @@ void succeed_tests(void)
 
 	/* Short option's argument starting with `-` (space form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'z', NULL, true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -454,9 +454,9 @@ void succeed_tests(void)
 
 	/* Long option's argument starting with `-` (space form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "janine", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -467,9 +467,9 @@ void succeed_tests(void)
 
 	/* Long option's argument starting with `-` (equal form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "janine", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -480,10 +480,10 @@ void succeed_tests(void)
 
 	/* Long option's empty argument (equal form) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'f', NULL, false },
 			{ 0, '\0', "yeah", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_succeed(
@@ -500,25 +500,25 @@ void succeed_tests(void)
  */
 static
 void test_fail(const char *cmdline, const char *expected_error,
-		const struct bt_argpar_opt_descr *descrs)
+		const struct argpar_opt_descr *descrs)
 {
-	struct bt_argpar_parse_ret parse_ret;
+	struct argpar_parse_ret parse_ret;
 	gchar **argv = g_strsplit(cmdline, " ", 0);
 
-	parse_ret = bt_argpar_parse(g_strv_length(argv),
+	parse_ret = argpar_parse(g_strv_length(argv),
 		(const char * const *) argv, descrs, true);
 	ok(!parse_ret.items,
-		"bt_argpar_parse() fails for command line `%s`", cmdline);
+		"argpar_parse() fails for command line `%s`", cmdline);
 	ok(parse_ret.error,
-		"bt_argpar_parse() writes an error string for command line `%s`",
+		"argpar_parse() writes an error string for command line `%s`",
 		cmdline);
 	if (parse_ret.items) {
-		fail("bt_argpar_parse() writes the expected error string");
+		fail("argpar_parse() writes the expected error string");
 		goto end;
 	}
 
 	ok(strcmp(expected_error, parse_ret.error) == 0,
-		"bt_argpar_parse() writes the expected error string "
+		"argpar_parse() writes the expected error string "
 		"for command line `%s`", cmdline);
 	if (strcmp(expected_error, parse_ret.error) != 0) {
 		diag("Expected: `%s`", expected_error);
@@ -526,7 +526,7 @@ void test_fail(const char *cmdline, const char *expected_error,
 	}
 
 end:
-	bt_argpar_parse_ret_fini(&parse_ret);
+	argpar_parse_ret_fini(&parse_ret);
 	g_strfreev(argv);
 }
 
@@ -535,9 +535,9 @@ void fail_tests(void)
 {
 	/* Unknown long option */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "thumb", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_fail(
@@ -548,9 +548,9 @@ void fail_tests(void)
 
 	/* Unknown short option */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "thumb", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_fail(
@@ -561,9 +561,9 @@ void fail_tests(void)
 
 	/* Missing long option argument */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "thumb", true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_fail(
@@ -574,9 +574,9 @@ void fail_tests(void)
 
 	/* Missing short option argument */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'k', NULL, true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_fail(
@@ -587,11 +587,11 @@ void fail_tests(void)
 
 	/* Missing short option argument (multiple glued) */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'a', NULL, false },
 			{ 0, 'b', NULL, false },
 			{ 0, 'c', NULL, true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_fail(
@@ -602,11 +602,11 @@ void fail_tests(void)
 
 	/* Invalid `-` */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'a', NULL, false },
 			{ 0, 'b', NULL, false },
 			{ 0, 'c', NULL, true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_fail(
@@ -617,11 +617,11 @@ void fail_tests(void)
 
 	/* Invalid `--` */
 	{
-		const struct bt_argpar_opt_descr descrs[] = {
+		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'a', NULL, false },
 			{ 0, 'b', NULL, false },
 			{ 0, 'c', NULL, true },
-			BT_ARGPAR_OPT_DESCR_SENTINEL
+			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_fail(
