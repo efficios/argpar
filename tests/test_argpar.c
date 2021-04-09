@@ -629,11 +629,23 @@ void fail_tests(void)
 			"While parsing argument #2 (`--`): Invalid argument",
 			descrs);
 	}
+
+	{
+		const struct argpar_opt_descr descrs[] = {
+			{ 0, 'c', "chevre", false },
+			ARGPAR_OPT_DESCR_SENTINEL
+		};
+
+		test_fail(
+			"--chevre=fromage",
+			"While parsing argument #1 (`--chevre=fromage`): Unexpected argument for option `--chevre`",
+			descrs);
+	}
 }
 
 int main(void)
 {
-	plan_tests(129);
+	plan_tests(132);
 	succeed_tests();
 	fail_tests();
 	return exit_status();
