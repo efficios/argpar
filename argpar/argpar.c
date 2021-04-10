@@ -1,7 +1,8 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Copyright 2019 Philippe Proulx <pproulx@efficios.com>
+ * Copyright (c) 2019-2021 Philippe Proulx <pproulx@efficios.com>
+ * Copyright (c) 2020-2021 Simon Marchi <simon.marchi@efficios.com>
  */
 
 #include <assert.h>
@@ -24,6 +25,39 @@
 #else
 # define ARGPAR_PRINTF_FORMAT printf
 #endif
+
+/*
+ * An argpar iterator.
+ *
+ * Such a structure contains the state of an iterator between
+ * calls to argpar_iter_parse_next().
+ */
+struct argpar_iter {
+	/*
+	 * Data provided by the user to argpar_iter_create(); immutable
+	 * afterwards.
+	 */
+	unsigned int argc;
+	const char * const *argv;
+	const struct argpar_opt_descr *descrs;
+
+	/*
+	 * Index of the argument to process in the next
+	 * argpar_iter_parse_next() call.
+	 */
+	unsigned int i;
+
+	/* Counter of non-option arguments */
+	int non_opt_index;
+
+	/*
+	 * Current character of the current short option group: if it's
+	 * not `NULL`, the parser is in within a short option group,
+	 * therefore it must resume there in the next
+	 * argpar_iter_parse_next() call.
+	 */
+	const char *short_opt_ch;
+};
 
 static __attribute__((format(ARGPAR_PRINTF_FORMAT, 1, 0)))
 char *argpar_vasprintf(const char *fmt, va_list args)
@@ -104,20 +138,21 @@ end:
 	return success;
 }
 
-static
-void destroy_item(struct argpar_item * const item)
+ARGPAR_HIDDEN
+void argpar_item_destroy(const struct argpar_item * const item)
 {
 	if (!item) {
 		goto end;
 	}
 
 	if (item->type == ARGPAR_ITEM_TYPE_OPT) {
-		struct argpar_item_opt * const opt_item = (void *) item;
+		struct argpar_item_opt * const opt_item =
+			(struct argpar_item_opt *) item;
 
 		free((void *) opt_item->arg);
 	}
 
-	free(item);
+	free((void *) item);
 
 end:
 	return;
@@ -163,7 +198,7 @@ void destroy_item_array(struct argpar_item_array * const array)
 		unsigned int i;
 
 		for (i = 0; i < array->n_items; i++) {
-			destroy_item(array->items[i]);
+			argpar_item_destroy(array->items[i]);
 		}
 
 		free(array->items);
@@ -224,7 +259,7 @@ struct argpar_item_opt *create_opt_item(
 	goto end;
 
 error:
-	destroy_item(&opt_item->base);
+	argpar_item_destroy(&opt_item->base);
 	opt_item = NULL;
 
 end:
@@ -285,72 +320,74 @@ static
 enum parse_orig_arg_opt_ret parse_short_opts(const char * const short_opts,
 		const char * const next_orig_arg,
 		const struct argpar_opt_descr * const descrs,
-		struct argpar_parse_ret * const parse_ret,
-		bool * const used_next_orig_arg)
+		struct argpar_iter * const iter,
+		char ** const error, struct argpar_item ** const item)
 {
 	enum parse_orig_arg_opt_ret ret = PARSE_ORIG_ARG_OPT_RET_OK;
-	const char *short_opt_ch = short_opts;
+	bool used_next_orig_arg = false;
+	const char *opt_arg = NULL;
+	const struct argpar_opt_descr *descr;
+	struct argpar_item_opt *opt_item;
 
 	if (strlen(short_opts) == 0) {
-		argpar_string_append_printf(&parse_ret->error, "Invalid argument");
+		argpar_string_append_printf(error, "Invalid argument");
 		goto error;
 	}
 
-	while (*short_opt_ch) {
-		const char *opt_arg = NULL;
-		const struct argpar_opt_descr *descr;
-		struct argpar_item_opt *opt_item;
+	if (!iter->short_opt_ch) {
+		iter->short_opt_ch = short_opts;
+	}
 
-		/* Find corresponding option descriptor */
-		descr = find_descr(descrs, *short_opt_ch, NULL);
-		if (!descr) {
-			ret = PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT;
-			argpar_string_append_printf(&parse_ret->error,
-				"Unknown option `-%c`", *short_opt_ch);
+	/* Find corresponding option descriptor */
+	descr = find_descr(descrs, *iter->short_opt_ch, NULL);
+	if (!descr) {
+		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT;
+		argpar_string_append_printf(error,
+			"Unknown option `-%c`", *iter->short_opt_ch);
+		goto error;
+	}
+
+	if (descr->with_arg) {
+		if (iter->short_opt_ch[1]) {
+			/* `-oarg` form */
+			opt_arg = &iter->short_opt_ch[1];
+		} else {
+			/* `-o arg` form */
+			opt_arg = next_orig_arg;
+			used_next_orig_arg = true;
+		}
+
+		/*
+		 * We accept `-o ''` (empty option argument), but not
+		 * `-o` alone if an option argument is expected.
+		 */
+		if (!opt_arg || (iter->short_opt_ch[1] && strlen(opt_arg) == 0)) {
+			argpar_string_append_printf(error,
+				"Missing required argument for option `-%c`",
+				*iter->short_opt_ch);
+			used_next_orig_arg = false;
 			goto error;
 		}
+	}
 
-		if (descr->with_arg) {
-			if (short_opt_ch[1]) {
-				/* `-oarg` form */
-				opt_arg = &short_opt_ch[1];
-			} else {
-				/* `-o arg` form */
-				opt_arg = next_orig_arg;
-				*used_next_orig_arg = true;
-			}
+	/* Create and append option argument */
+	opt_item = create_opt_item(descr, opt_arg);
+	if (!opt_item) {
+		goto error;
+	}
 
-			/*
-			 * We accept `-o ''` (empty option's argument),
-			 * but not `-o` alone if an option's argument is
-			 * expected.
-			 */
-			if (!opt_arg || (short_opt_ch[1] && strlen(opt_arg) == 0)) {
-				argpar_string_append_printf(&parse_ret->error,
-					"Missing required argument for option `-%c`",
-					*short_opt_ch);
-				*used_next_orig_arg = false;
-				goto error;
-			}
+	*item = &opt_item->base;
+	iter->short_opt_ch++;
+
+	if (descr->with_arg || !*iter->short_opt_ch) {
+		/* Option has an argument: no more options */
+		iter->short_opt_ch = NULL;
+
+		if (used_next_orig_arg) {
+			iter->i += 2;
+		} else {
+			iter->i++;
 		}
-
-		/* Create and append option argument */
-		opt_item = create_opt_item(descr, opt_arg);
-		if (!opt_item) {
-			goto error;
-		}
-
-		if (!push_item(parse_ret->items, &opt_item->base)) {
-			goto error;
-		}
-
-		if (descr->with_arg) {
-			/* Option has an argument: no more options */
-			break;
-		}
-
-		/* Go to next short option */
-		short_opt_ch++;
 	}
 
 	goto end;
@@ -368,13 +405,14 @@ static
 enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		const char * const next_orig_arg,
 		const struct argpar_opt_descr * const descrs,
-		struct argpar_parse_ret * const parse_ret,
-		bool * const used_next_orig_arg)
+		struct argpar_iter * const iter,
+		char ** const error, struct argpar_item ** const item)
 {
 	const size_t max_len = 127;
 	enum parse_orig_arg_opt_ret ret = PARSE_ORIG_ARG_OPT_RET_OK;
 	const struct argpar_opt_descr *descr;
 	struct argpar_item_opt *opt_item;
+	bool used_next_orig_arg = false;
 
 	/* Option's argument, if any */
 	const char *opt_arg = NULL;
@@ -389,8 +427,7 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 	const char *long_opt_name = long_opt_arg;
 
 	if (strlen(long_opt_arg) == 0) {
-		argpar_string_append_printf(&parse_ret->error,
-			"Invalid argument");
+		argpar_string_append_printf(error, "Invalid argument");
 		goto error;
 	}
 
@@ -401,7 +438,7 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 
 		/* Isolate the option name */
 		if (long_opt_name_size > max_len) {
-			argpar_string_append_printf(&parse_ret->error,
+			argpar_string_append_printf(error,
 				"Invalid argument `--%s`", long_opt_arg);
 			goto error;
 		}
@@ -414,7 +451,7 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 	/* Find corresponding option descriptor */
 	descr = find_descr(descrs, '\0', long_opt_name);
 	if (!descr) {
-		argpar_string_append_printf(&parse_ret->error,
+		argpar_string_append_printf(error,
 			"Unknown option `--%s`", long_opt_name);
 		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT;
 		goto error;
@@ -428,23 +465,22 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		} else {
 			/* `--long-opt arg` style */
 			if (!next_orig_arg) {
-				argpar_string_append_printf(&parse_ret->error,
+				argpar_string_append_printf(error,
 					"Missing required argument for option `--%s`",
 					long_opt_name);
 				goto error;
 			}
 
 			opt_arg = next_orig_arg;
-			*used_next_orig_arg = true;
+			used_next_orig_arg = true;
 		}
 	} else if (eq_pos) {
 		/*
 		 * Unexpected `--opt=arg` style for a long option which
 		 * doesn't accept an argument.
 		 */
-		argpar_string_append_printf(&parse_ret->error,
-			"Unexpected argument for option `--%s`",
-			long_opt_name);
+		argpar_string_append_printf(error,
+			"Unexpected argument for option `--%s`", long_opt_name);
 		goto error;
 	}
 
@@ -454,10 +490,13 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		goto error;
 	}
 
-	if (!push_item(parse_ret->items, &opt_item->base)) {
-		goto error;
+	if (used_next_orig_arg) {
+		iter->i += 2;
+	} else {
+		iter->i++;
 	}
 
+	*item = &opt_item->base;
 	goto end;
 
 error:
@@ -473,8 +512,9 @@ static
 enum parse_orig_arg_opt_ret parse_orig_arg_opt(const char * const orig_arg,
 		const char * const next_orig_arg,
 		const struct argpar_opt_descr * const descrs,
-		struct argpar_parse_ret * const parse_ret,
-		bool * const used_next_orig_arg)
+		struct argpar_iter * const iter,
+		char ** const error,
+		struct argpar_item ** const item)
 {
 	enum parse_orig_arg_opt_ret ret = PARSE_ORIG_ARG_OPT_RET_OK;
 
@@ -483,13 +523,11 @@ enum parse_orig_arg_opt_ret parse_orig_arg_opt(const char * const orig_arg,
 	if (orig_arg[1] == '-') {
 		/* Long option */
 		ret = parse_long_opt(&orig_arg[2],
-			next_orig_arg, descrs, parse_ret,
-			used_next_orig_arg);
+			next_orig_arg, descrs, iter, error, item);
 	} else {
 		/* Short option */
 		ret = parse_short_opts(&orig_arg[1],
-			next_orig_arg, descrs, parse_ret,
-			used_next_orig_arg);
+			next_orig_arg, descrs, iter, error, item);
 	}
 
 	return ret;
@@ -521,93 +559,170 @@ end:
 }
 
 ARGPAR_HIDDEN
-struct argpar_parse_ret argpar_parse(unsigned int argc,
-		const char * const *argv,
+struct argpar_iter *argpar_iter_create(const unsigned int argc,
+		const char * const * const argv,
+		const struct argpar_opt_descr * const descrs)
+{
+	struct argpar_iter * const iter = argpar_zalloc(struct argpar_iter);
+
+	if (!iter) {
+		goto end;
+	}
+
+	iter->argc = argc;
+	iter->argv = argv;
+	iter->descrs = descrs;
+
+end:
+	return iter;
+}
+
+ARGPAR_HIDDEN
+void argpar_iter_destroy(struct argpar_iter * const iter)
+{
+	free(iter);
+}
+
+ARGPAR_HIDDEN
+enum argpar_iter_parse_next_status argpar_iter_parse_next(
+		struct argpar_iter * const iter,
+		const struct argpar_item ** const item,
+		char ** const error)
+{
+	enum argpar_iter_parse_next_status status;
+	enum parse_orig_arg_opt_ret parse_orig_arg_opt_ret;
+	const char *orig_arg;
+	const char *next_orig_arg;
+
+	ARGPAR_ASSERT(iter->i <= iter->argc);
+	*error = NULL;
+
+	if (iter->i == iter->argc) {
+		status = ARGPAR_ITER_PARSE_NEXT_STATUS_END;
+		goto end;
+	}
+
+	orig_arg = iter->argv[iter->i];
+	next_orig_arg =
+		iter->i < (iter->argc - 1) ? iter->argv[iter->i + 1] : NULL;
+
+	if (orig_arg[0] != '-') {
+		/* Non-option argument */
+		struct argpar_item_non_opt * const non_opt_item =
+			create_non_opt_item(orig_arg, iter->i,
+				iter->non_opt_index);
+
+		if (!non_opt_item) {
+			status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR;
+			goto end;
+		}
+
+		iter->non_opt_index++;
+		iter->i++;
+		*item = &non_opt_item->base;
+		status = ARGPAR_ITER_PARSE_NEXT_STATUS_OK;
+		goto end;
+	}
+
+	/* Option argument */
+	parse_orig_arg_opt_ret = parse_orig_arg_opt(orig_arg,
+		next_orig_arg, iter->descrs, iter, error,
+		(struct argpar_item **) item);
+	switch (parse_orig_arg_opt_ret) {
+	case PARSE_ORIG_ARG_OPT_RET_OK:
+		status = ARGPAR_ITER_PARSE_NEXT_STATUS_OK;
+		break;
+	case PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT:
+		prepend_while_parsing_arg_to_error(error, iter->i, orig_arg);
+		status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT;
+		break;
+	case PARSE_ORIG_ARG_OPT_RET_ERROR:
+		prepend_while_parsing_arg_to_error(error, iter->i, orig_arg);
+		status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR;
+		break;
+	default:
+		abort();
+	}
+
+end:
+	return status;
+}
+
+ARGPAR_HIDDEN
+unsigned int argpar_iter_get_ingested_orig_args(
+		const struct argpar_iter * const iter)
+{
+	return iter->i;
+}
+
+ARGPAR_HIDDEN
+struct argpar_parse_ret argpar_parse(const unsigned int argc,
+		const char * const * const argv,
 		const struct argpar_opt_descr * const descrs,
-		bool fail_on_unknown_opt)
+		const bool fail_on_unknown_opt)
 {
 	struct argpar_parse_ret parse_ret = { 0 };
-	unsigned int i;
-	unsigned int non_opt_index = 0;
+	const struct argpar_item *item = NULL;
+	struct argpar_iter *iter = NULL;
 
 	parse_ret.items = new_item_array();
 	if (!parse_ret.items) {
+		parse_ret.error = strdup("Failed to create items array.");
+		ARGPAR_ASSERT(parse_ret.error);
 		goto error;
 	}
 
-	for (i = 0; i < argc; i++) {
-		enum parse_orig_arg_opt_ret parse_orig_arg_opt_ret;
-		bool used_next_orig_arg = false;
-		const char * const orig_arg = argv[i];
-		const char * const next_orig_arg =
-			i < argc - 1 ? argv[i + 1] : NULL;
-
-		if (orig_arg[0] != '-') {
-			/* Non-option argument */
-			struct argpar_item_non_opt *non_opt_item =
-				create_non_opt_item(orig_arg, i, non_opt_index);
-
-			if (!non_opt_item) {
-				goto error;
-			}
-
-			non_opt_index++;
-
-			if (!push_item(parse_ret.items, &non_opt_item->base)) {
-				goto error;
-			}
-
-			continue;
-		}
-
-		/* Option argument */
-		parse_orig_arg_opt_ret = parse_orig_arg_opt(orig_arg,
-			next_orig_arg, descrs, &parse_ret, &used_next_orig_arg);
-		switch (parse_orig_arg_opt_ret) {
-		case PARSE_ORIG_ARG_OPT_RET_OK:
-			break;
-		case PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT:
-			ARGPAR_ASSERT(!used_next_orig_arg);
-
-			if (fail_on_unknown_opt) {
-				prepend_while_parsing_arg_to_error(
-					&parse_ret.error, i, orig_arg);
-				goto error;
-			}
-
-			/*
-			 * The current original argument is not
-			 * considered ingested because it triggered an
-			 * unknown option.
-			 */
-			parse_ret.ingested_orig_args = i;
-			free(parse_ret.error);
-			parse_ret.error = NULL;
-			goto end;
-		case PARSE_ORIG_ARG_OPT_RET_ERROR:
-			prepend_while_parsing_arg_to_error(
-				&parse_ret.error, i, orig_arg);
-			goto error;
-		default:
-			abort();
-		}
-
-		if (used_next_orig_arg) {
-			i++;
-		}
+	iter = argpar_iter_create(argc, argv, descrs);
+	if (!iter) {
+		parse_ret.error = strdup("Failed to create argpar iter.");
+		ARGPAR_ASSERT(parse_ret.error);
+		goto error;
 	}
 
-	parse_ret.ingested_orig_args = argc;
-	free(parse_ret.error);
-	parse_ret.error = NULL;
+	while (true) {
+		enum argpar_iter_parse_next_status status;
+
+		status = argpar_iter_parse_next(iter, &item, &parse_ret.error);
+		if (status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR) {
+			goto error;
+		} else if (status == ARGPAR_ITER_PARSE_NEXT_STATUS_END) {
+			break;
+		} else if (status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT) {
+			if (fail_on_unknown_opt) {
+				parse_ret.ingested_orig_args =
+					argpar_iter_get_ingested_orig_args(iter);
+				goto error;
+			}
+
+			free(parse_ret.error);
+			parse_ret.error = NULL;
+			break;
+		}
+
+		ARGPAR_ASSERT(status == ARGPAR_ITER_PARSE_NEXT_STATUS_OK);
+
+		if (!push_item(parse_ret.items, (void *) item)) {
+			goto error;
+		}
+
+		item = NULL;
+	}
+
+	ARGPAR_ASSERT(!parse_ret.error);
+	parse_ret.ingested_orig_args =
+		argpar_iter_get_ingested_orig_args(iter);
 	goto end;
 
 error:
-	/* That's how we indicate that an error occured */
+	ARGPAR_ASSERT(parse_ret.error);
+
+	/* That's how we indicate that an error occurred */
 	destroy_item_array(parse_ret.items);
 	parse_ret.items = NULL;
 
 end:
+	argpar_iter_destroy(iter);
+	argpar_item_destroy(item);
 	return parse_ret;
 }
 

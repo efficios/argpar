@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2019 Philippe Proulx <pproulx@efficios.com>
+ * Copyright (c) 2019-2021 Philippe Proulx <pproulx@efficios.com>
+ * Copyright (c) 2020-2021 Simon Marchi <simon.marchi@efficios.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,20 +25,60 @@
 #include "argpar/argpar.h"
 
 /*
- * Tests that the command line `cmdline`, with non-quoted
- * space-delimited arguments, once parsed given the option descriptors
- * `descrs` and the option `fail_on_unknown_opt`, succeeds and gives the
- * expected command line `expected_cmd_line` and number of ingested
- * original arguments `expected_ingested_orig_args`.
- *
- * The resulting command-line is built from the resulting arguments,
- * space-delimiting each argument, preferring the `--long-opt=arg` style
- * over the `-s arg` style, and using the `arg<A,B>` form for non-option
- * arguments where `A` is the original argument index and `B` is the
- * non-option argument index.
+ * Append `item` to `res_str` to incrementally build an expected command line string.
  */
 static
-void test_succeed(const char *cmdline,
+void append_to_res_str(GString *res_str, const struct argpar_item *item)
+{
+	if (res_str->len > 0) {
+		g_string_append_c(res_str, ' ');
+	}
+
+	switch (item->type) {
+	case ARGPAR_ITEM_TYPE_OPT:
+	{
+		const struct argpar_item_opt *item_opt =
+			(const void *) item;
+
+		if (item_opt->descr->long_name) {
+			g_string_append_printf(res_str, "--%s",
+				item_opt->descr->long_name);
+
+			if (item_opt->arg) {
+				g_string_append_printf(res_str, "=%s",
+					item_opt->arg);
+			}
+		} else if (item_opt->descr->short_name) {
+			g_string_append_printf(res_str, "-%c",
+				item_opt->descr->short_name);
+
+			if (item_opt->arg) {
+				g_string_append_printf(res_str, " %s",
+					item_opt->arg);
+			}
+		}
+
+		break;
+	}
+	case ARGPAR_ITEM_TYPE_NON_OPT:
+	{
+		const struct argpar_item_non_opt *item_non_opt =
+			(const void *) item;
+
+		g_string_append_printf(res_str, "%s<%u,%u>",
+			item_non_opt->arg, item_non_opt->orig_index,
+			item_non_opt->non_opt_index);
+		break;
+	}
+	default:
+		abort();
+	}
+}
+
+/* Test using the all-at-once argpar_parse function. */
+
+static
+void test_succeed_argpar_parse(const char *cmdline,
 		const char *expected_cmd_line,
 		const struct argpar_opt_descr *descrs,
 		unsigned int expected_ingested_orig_args)
@@ -70,55 +111,9 @@ void test_succeed(const char *cmdline,
 	}
 
 	for (i = 0; i < parse_ret.items->n_items; i++) {
-		const struct argpar_item *arg = parse_ret.items->items[i];
+		const struct argpar_item *item = parse_ret.items->items[i];
 
-		switch (arg->type) {
-		case ARGPAR_ITEM_TYPE_OPT:
-		{
-			const struct argpar_item_opt *arg_opt =
-				(const void *) arg;
-
-			if (arg_opt->descr->long_name) {
-				g_string_append_printf(res_str, "--%s",
-					arg_opt->descr->long_name);
-
-				if (arg_opt->arg) {
-					g_string_append_printf(res_str, "=%s",
-						arg_opt->arg);
-				}
-
-				g_string_append_c(res_str, ' ');
-			} else if (arg_opt->descr->short_name) {
-				g_string_append_printf(res_str, "-%c",
-					arg_opt->descr->short_name);
-
-				if (arg_opt->arg) {
-					g_string_append_printf(res_str, " %s",
-						arg_opt->arg);
-				}
-
-				g_string_append_c(res_str, ' ');
-			}
-
-			break;
-		}
-		case ARGPAR_ITEM_TYPE_NON_OPT:
-		{
-			const struct argpar_item_non_opt *arg_non_opt =
-				(const void *) arg;
-
-			g_string_append_printf(res_str, "%s<%u,%u> ",
-				arg_non_opt->arg, arg_non_opt->orig_index,
-				arg_non_opt->non_opt_index);
-			break;
-		}
-		default:
-			abort();
-		}
-	}
-
-	if (res_str->len > 0) {
-		g_string_truncate(res_str, res_str->len - 1);
+		append_to_res_str(res_str, item);
 	}
 
 	ok(strcmp(expected_cmd_line, res_str->str) == 0,
@@ -133,6 +128,104 @@ end:
 	argpar_parse_ret_fini(&parse_ret);
 	g_string_free(res_str, TRUE);
 	g_strfreev(argv);
+}
+
+/* Test using the iterator API. */
+
+static
+void test_succeed_argpar_iter(const char *cmdline,
+		const char *expected_cmd_line,
+		const struct argpar_opt_descr *descrs,
+		unsigned int expected_ingested_orig_args)
+{
+	struct argpar_iter *iter = NULL;
+	const struct argpar_item *item = NULL;
+	char *error = NULL;
+	GString *res_str = g_string_new(NULL);
+	gchar **argv = g_strsplit(cmdline, " ", 0);
+	unsigned int i, actual_ingested_orig_args;
+
+	assert(argv);
+	assert(res_str);
+
+	iter = argpar_iter_create(g_strv_length(argv),
+		(const char * const *) argv, descrs);
+	assert(iter);
+
+	for (i = 0; ; i++) {
+		enum argpar_iter_parse_next_status status;
+
+		ARGPAR_ITEM_DESTROY_AND_RESET(item);
+		status = argpar_iter_parse_next(iter, &item, &error);
+
+		ok(status == ARGPAR_ITER_PARSE_NEXT_STATUS_OK ||
+			status == ARGPAR_ITER_PARSE_NEXT_STATUS_END ||
+			status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			"argpar_iter_parse_next() for command line `%s` call #%u: status", cmdline, i);
+
+		if (status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT) {
+			ok(error, "argpar_iter_parse_next() for command line `%s` call #%u: error returned", cmdline, i);
+		} else {
+			ok(!error, "argpar_iter_parse_next() for command line `%s` call #%u: no error returned", cmdline, i);
+		}
+
+		if (status == ARGPAR_ITER_PARSE_NEXT_STATUS_END ||
+				status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT) {
+			ok(!item, "argpar_iter_parse_next() for command line `%s` call #%u: no item returned", cmdline, i);
+			break;
+		}
+
+		append_to_res_str(res_str, item);
+	}
+
+	actual_ingested_orig_args = argpar_iter_get_ingested_orig_args(iter);
+	ok(actual_ingested_orig_args == expected_ingested_orig_args,
+		"argpar_iter_get_ingested_orig_args() returns the correct number of ingested "
+		"original arguments for command line `%s`", cmdline);
+	if (actual_ingested_orig_args != expected_ingested_orig_args) {
+		diag("Expected: %u    Got: %u", expected_ingested_orig_args,
+			actual_ingested_orig_args);
+	}
+
+	ok(strcmp(expected_cmd_line, res_str->str) == 0,
+		"argpar_iter_parse_next() returns the expected parsed arguments "
+		"for command line `%s`", cmdline);
+	if (strcmp(expected_cmd_line, res_str->str) != 0) {
+		diag("Expected: `%s`", expected_cmd_line);
+		diag("Got:      `%s`", res_str->str);
+	}
+
+	argpar_item_destroy(item);
+	argpar_iter_destroy(iter);
+	g_string_free(res_str, TRUE);
+	g_strfreev(argv);
+	free(error);
+}
+
+/*
+ * Tests that the command line `cmdline`, with non-quoted
+ * space-delimited arguments, once parsed given the option descriptors
+ * `descrs`, succeeds and gives the expected command line `expected_cmd_line`
+ * and number of ingested original arguments `expected_ingested_orig_args`.
+ *
+ * The resulting command-line is built from the resulting arguments,
+ * space-delimiting each argument, preferring the `--long-opt=arg` style
+ * over the `-s arg` style, and using the `arg<A,B>` form for non-option
+ * arguments where `A` is the original argument index and `B` is the
+ * non-option argument index.
+ *
+ * Test with both the parse-all-at-once and iterator-style APIs.
+ */
+static
+void test_succeed(const char *cmdline,
+		const char *expected_cmd_line,
+		const struct argpar_opt_descr *descrs,
+		unsigned int expected_ingested_orig_args)
+{
+	test_succeed_argpar_parse(cmdline, expected_cmd_line, descrs,
+		expected_ingested_orig_args);
+	test_succeed_argpar_iter(cmdline, expected_cmd_line, descrs,
+		expected_ingested_orig_args);
 }
 
 static
@@ -493,13 +586,10 @@ void succeed_tests(void)
 	}
 }
 
-/*
- * Tests that the command line `cmdline`, with non-quoted
- * space-delimited arguments, once parsed given the option descriptors
- * `descrs`, fails and gives the expected error `expected_error`.
- */
+/* Test using the all-at-once argpar_parse function. */
+
 static
-void test_fail(const char *cmdline, const char *expected_error,
+void test_fail_argpar_parse(const char *cmdline, const char *expected_error,
 		const struct argpar_opt_descr *descrs)
 {
 	struct argpar_parse_ret parse_ret;
@@ -528,6 +618,73 @@ void test_fail(const char *cmdline, const char *expected_error,
 end:
 	argpar_parse_ret_fini(&parse_ret);
 	g_strfreev(argv);
+}
+
+/* Test using the iterator API. */
+
+static
+void test_fail_argpar_iter(const char *cmdline, const char *expected_error,
+		const struct argpar_opt_descr *descrs)
+{
+	struct argpar_iter *iter = NULL;
+	const struct argpar_item *item = NULL;
+	gchar **argv = g_strsplit(cmdline, " ", 0);
+	unsigned int i;
+	char *error = NULL;
+
+	iter = argpar_iter_create(g_strv_length(argv),
+		(const char * const *) argv, descrs);
+	assert(iter);
+
+	for (i = 0; ; i++) {
+		enum argpar_iter_parse_next_status status;
+
+		ARGPAR_ITEM_DESTROY_AND_RESET(item);
+		status = argpar_iter_parse_next(iter, &item, &error);
+
+		ok(status == ARGPAR_ITER_PARSE_NEXT_STATUS_OK ||
+			status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR ||
+			status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			"argpar_iter_parse_next() for command line `%s` call #%u: status", cmdline, i);
+
+		if (status != ARGPAR_ITER_PARSE_NEXT_STATUS_OK) {
+			ok(!item, "argpar_iter_parse_next() for command line `%s` call #%u: no item returned", cmdline, i);
+			ok(error, "argpar_iter_parse_next() for command line `%s` call #%u: error returned", cmdline, i);
+			break;
+		}
+
+		ok(item, "argpar_iter_parse_next() for command line `%s` call #%u: item returned", cmdline, i);
+		ok(!error, "argpar_iter_parse_next() for command line `%s` call #%u: no error returned", cmdline, i);
+	}
+
+	ok(strcmp(expected_error, error) == 0,
+		"argpar_iter_parse_next() writes the expected error string "
+		"for command line `%s`", cmdline);
+	if (strcmp(expected_error, error) != 0) {
+		diag("Expected: `%s`", expected_error);
+		diag("Got:      `%s`", error);
+	}
+
+	argpar_item_destroy(item);
+	argpar_iter_destroy(iter);
+	free(error);
+	g_strfreev(argv);
+}
+
+/*
+ * Tests that the command line `cmdline`, with non-quoted
+ * space-delimited arguments, once parsed given the option descriptors
+ * `descrs`, fails and gives the expected error `expected_error`.
+ *
+ * Test with both the parse-all-at-once and iterator-style APIs.
+ */
+
+static
+void test_fail(const char *cmdline, const char *expected_error,
+		const struct argpar_opt_descr *descrs)
+{
+	test_fail_argpar_parse(cmdline, expected_error, descrs);
+	test_fail_argpar_iter(cmdline, expected_error, descrs);
 }
 
 static
@@ -645,7 +802,7 @@ void fail_tests(void)
 
 int main(void)
 {
-	plan_tests(132);
+	plan_tests(419);
 	succeed_tests();
 	fail_tests();
 	return exit_status();
