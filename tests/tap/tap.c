@@ -1,34 +1,17 @@
-/*-
- * Copyright (c) 2004 Nik Clayton
- * All rights reserved.
+/*
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * Copyright (C) 2004 Nik Clayton
+ * Copyright (C) 2017 Jérémie Galarneau
  */
 
-#define _GNU_SOURCE
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <assert.h>
 
 #include "tap.h"
 
@@ -39,15 +22,13 @@ static unsigned int test_count = 0; /* Number of tests that have been run */
 static unsigned int e_tests = 0; /* Expected number of tests to run */
 static unsigned int failures = 0; /* Number of tests that failed */
 static char *todo_msg = NULL;
-static char *todo_msg_fixed = "libtap malloc issue";
+static const char *todo_msg_fixed = "libtap malloc issue";
 static int todo = 0;
 static int test_died = 0;
-static const  int exit_die  = 255;       /* exit-code on die() */
-
 
 /* Encapsulate the pthread code in a conditional.  In the absence of
    libpthread the code does nothing */
-#if defined(LIBTAP_ENABLE_BROKEN_THREAD_SAFE) && defined(HAVE_LIBPTHREAD)
+#ifdef HAVE_LIBPTHREAD
 #include <pthread.h>
 static pthread_mutex_t M = PTHREAD_MUTEX_INITIALIZER;
 # define LOCK pthread_mutex_lock(&M);
@@ -60,6 +41,18 @@ static pthread_mutex_t M = PTHREAD_MUTEX_INITIALIZER;
 static void _expected_tests(unsigned int);
 static void _tap_init(void);
 static void _cleanup(void);
+
+#ifdef __MINGW32__
+static inline
+void flockfile (FILE * filehandle) {
+       return;
+}
+
+static inline
+void funlockfile(FILE * filehandle) {
+       return;
+}
+#endif
 
 /*
  * Generate a test result.
@@ -85,10 +78,9 @@ _gen_result(int ok, const char *func, const char *file, unsigned int line,
 	   expansions on it */
 	if(test_name != NULL) {
 		va_start(ap, test_name);
-		if (vasprintf(&local_test_name, test_name, ap) < 0)
-        {
-            local_test_name = NULL;
-        }
+		if (vasprintf(&local_test_name, test_name, ap) == -1) {
+			local_test_name = NULL;
+		}
 		va_end(ap);
 
 		/* Make sure the test name contains more than digits
@@ -97,7 +89,7 @@ _gen_result(int ok, const char *func, const char *file, unsigned int line,
 		if(local_test_name) {
 			name_is_digits = 1;
 			for(c = local_test_name; *c != '\0'; c++) {
-				if(!isdigit(*c) && !isspace(*c)) {
+				if(!isdigit((unsigned char) *c) && !isspace((unsigned char) *c)) {
 					name_is_digits = 0;
 					break;
 				}
@@ -150,10 +142,13 @@ _gen_result(int ok, const char *func, const char *file, unsigned int line,
 
 	printf("\n");
 
-	if(!ok)
+	if(!ok) {
+		if(getenv("HARNESS_ACTIVE") != NULL)
+			fputs("\n", stderr);
+
 		diag("    Failed %stest (%s:%s() at line %d)",
 		     todo ? "(TODO) " : "", file, func, line);
-
+	}
 	free(local_test_name);
 
 	UNLOCK;
@@ -172,8 +167,6 @@ _tap_init(void)
 {
 	static int run_once = 0;
 
-	LOCK;
-
 	if(!run_once) {
 		atexit(_cleanup);
 
@@ -183,8 +176,6 @@ _tap_init(void)
 		setbuf(stdout, 0);
 		run_once = 1;
 	}
-
-	UNLOCK;
 }
 
 /*
@@ -202,7 +193,7 @@ plan_no_plan(void)
 		fprintf(stderr, "You tried to plan twice!\n");
 		test_died = 1;
 		UNLOCK;
-		exit(exit_die);
+		exit(255);
 	}
 
 	have_plan = 1;
@@ -229,7 +220,7 @@ plan_skip_all(const char *reason)
 	printf("1..0");
 
 	if(reason != NULL)
-		printf(" # SKIP %s", reason);
+		printf(" # Skip %s", reason);
 
 	printf("\n");
 
@@ -253,14 +244,14 @@ plan_tests(unsigned int tests)
 		fprintf(stderr, "You tried to plan twice!\n");
 		test_died = 1;
 		UNLOCK;
-		exit(exit_die);
+		exit(255);
 	}
 
 	if(tests == 0) {
 		fprintf(stderr, "You said to run 0 tests!  You've got to run something.\n");
 		test_died = 1;
 		UNLOCK;
-		exit(exit_die);
+		exit(255);
 	}
 
 	have_plan = 1;
@@ -269,15 +260,13 @@ plan_tests(unsigned int tests)
 
 	UNLOCK;
 
-	return 1;
+	return e_tests;
 }
 
 unsigned int
 diag(const char *fmt, ...)
 {
 	va_list ap;
-
-	LOCK;
 
 	fputs("# ", stderr);
 
@@ -287,36 +276,51 @@ diag(const char *fmt, ...)
 
 	fputs("\n", stderr);
 
-	UNLOCK;
-
 	return 0;
+}
+
+void
+diag_multiline(const char *val)
+{
+	size_t len, i, line_start_idx = 0;
+
+	assert(val);
+	len = strlen(val);
+
+	for (i = 0; i < len; i++) {
+		int line_length;
+
+		if (val[i] != '\n') {
+			continue;
+		}
+
+		assert((i - line_start_idx + 1) <= INT_MAX);
+		line_length = i - line_start_idx + 1;
+		fprintf(stderr, "# %.*s", line_length, &val[line_start_idx]);
+		line_start_idx = i + 1;
+	}
 }
 
 void
 _expected_tests(unsigned int tests)
 {
 
-	LOCK;
-
 	printf("1..%d\n", tests);
 	e_tests = tests;
-
-	UNLOCK;
 }
 
 int
 skip(unsigned int n, const char *fmt, ...)
 {
 	va_list ap;
-	char *skip_msg;
+	char *skip_msg = NULL;
 
 	LOCK;
 
 	va_start(ap, fmt);
-    if (vasprintf(&skip_msg, fmt, ap) < 0)
-    {
-        skip_msg = NULL;
-    }
+	if (vasprintf(&skip_msg, fmt, ap) == -1) {
+		skip_msg = NULL;
+	}
 	va_end(ap);
 
 	while(n-- > 0) {
@@ -341,10 +345,9 @@ todo_start(const char *fmt, ...)
 	LOCK;
 
 	va_start(ap, fmt);
-	if (vasprintf(&todo_msg, fmt, ap) < 0)
-    {
-        todo_msg = NULL;
-    }
+	if (vasprintf(&todo_msg, fmt, ap) == -1) {
+		todo_msg = NULL;
+	}
 	va_end(ap);
 
 	todo = 1;
@@ -413,7 +416,7 @@ _cleanup(void)
 	}
 
 	if(test_died) {
- 	        diag("Looks like your test exited with %d just after %d.", exit_die, test_count);
+		diag("Looks like your test died just after %d.", test_count);
 		UNLOCK;
 		return;
 	}
@@ -426,22 +429,22 @@ _cleanup(void)
 	}
 
 	if((have_plan && !no_plan) && e_tests < test_count) {
-		diag("Looks like you planned %d test%s but ran %d extra.",
-		     e_tests, e_tests == 1 ? "":"s", test_count - e_tests);
+		diag("Looks like you planned %d %s but ran %d extra.",
+		     e_tests, e_tests == 1 ? "test" : "tests", test_count - e_tests);
 		UNLOCK;
 		return;
 	}
 
 	if((have_plan || !no_plan) && e_tests > test_count) {
-		diag("Looks like you planned %d test%s but ran %d.",
-		     e_tests, e_tests == 1 ? "":"s", test_count);
+		diag("Looks like you planned %d %s but only ran %d.",
+		     e_tests, e_tests == 1 ? "test" : "tests", test_count);
 		UNLOCK;
 		return;
 	}
 
 	if(failures)
-		diag("Looks like you failed %d test%s of %d.",
-		     failures, failures == 1 ? "":"s", test_count);
+		diag("Looks like you failed %d %s of %d.",
+		     failures, failures == 1 ? "test" : "tests", test_count);
 
 	UNLOCK;
 }
