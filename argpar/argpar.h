@@ -105,16 +105,16 @@
 #define ARGPAR_OPT_DESCR_SENTINEL	{ -1, '\0', NULL, false }
 
 /*
- * ARGPAR_HIDDEN: if argpar is used in some shared library, we don't
- * want them to be exported by that library, so mark them as "hidden".
+ * If argpar is used in some shared library, we don't want said library
+ * to export its symbols, so mark them as "hidden".
  *
  * On Windows, symbols are local unless explicitly exported; see
  * <https://gcc.gnu.org/wiki/Visibility>.
  */
 #if defined(_WIN32) || defined(__CYGWIN__)
-#define ARGPAR_HIDDEN
+# define ARGPAR_HIDDEN
 #else
-#define ARGPAR_HIDDEN __attribute__((visibility("hidden")))
+# define ARGPAR_HIDDEN __attribute__((visibility("hidden")))
 #endif
 
 /* Forward-declaration for the opaque type */
@@ -178,20 +178,19 @@ struct argpar_item_non_opt {
 };
 
 struct argpar_item_array {
-	/* Array of `struct argpar_item *`, or `NULL` on error */
-	struct argpar_item **items;
+	const struct argpar_item **items;
 
-	/* Number of used slots in `items`. */
+	/* Number of used slots in `items` */
 	unsigned int n_items;
 
-	/* Number of allocated slots in `items`. */
+	/* Number of allocated slots in `items` */
 	unsigned int n_alloc;
 };
 
 /* What is returned by argpar_parse() */
 struct argpar_parse_ret {
 	/*
-	 * Array of `struct argpar_item *`, or `NULL` on error.
+	 * Array of parsing items, or `NULL` on error.
 	 *
 	 * Do NOT destroy those items manually with
 	 * argpar_iter_destroy(): call argpar_parse_ret_fini() to
@@ -340,10 +339,10 @@ void argpar_item_destroy(const struct argpar_item *item);
  * Destroys `_item` (`const struct argpar_item *`) and sets it to
  * `NULL`.
  */
-#define ARGPAR_ITEM_DESTROY_AND_RESET(_item)	\
-	{					\
-		argpar_item_destroy(_item);	\
-		_item = NULL;			\
+#define ARGPAR_ITEM_DESTROY_AND_RESET(_item)				\
+	{								\
+		argpar_item_destroy(_item);				\
+		_item = NULL;						\
 	}
 
 #endif /* BABELTRACE_ARGPAR_H */
