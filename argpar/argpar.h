@@ -5,8 +5,8 @@
  * Copyright (c) 2020-2021 Simon Marchi <simon.marchi@efficios.com>
  */
 
-#ifndef BABELTRACE_ARGPAR_H
-#define BABELTRACE_ARGPAR_H
+#ifndef ARGPAR_ARGPAR_H
+#define ARGPAR_ARGPAR_H
 
 #include <stdbool.h>
 
@@ -345,4 +345,4 @@ void argpar_item_destroy(const struct argpar_item *item);
 		_item = NULL;						\
 	}
 
-#endif /* BABELTRACE_ARGPAR_H */
+#endif /* ARGPAR_ARGPAR_H */
