@@ -140,12 +140,17 @@ char *argpar_asprintf(const char * const fmt, ...)
 }
 
 static __attribute__((format(ARGPAR_PRINTF_FORMAT, 2, 3)))
-bool append_string_printf(char ** const str, const char *fmt, ...)
+bool try_append_string_printf(char ** const str, const char *fmt, ...)
 {
 	char *new_str = NULL;
-	char *addendum;
+	char *addendum = NULL;
 	bool success;
 	va_list args;
+
+	if (!str) {
+		success = true;
+		goto end;
+	}
 
 	ARGPAR_ASSERT(str);
 	va_start(args, fmt);
@@ -411,7 +416,7 @@ enum parse_orig_arg_opt_ret parse_short_opts(const char * const short_opts,
 	struct argpar_item_opt *opt_item;
 
 	if (strlen(short_opts) == 0) {
-		append_string_printf(error, "Invalid argument");
+		try_append_string_printf(error, "Invalid argument");
 		goto error;
 	}
 
@@ -423,7 +428,7 @@ enum parse_orig_arg_opt_ret parse_short_opts(const char * const short_opts,
 	descr = find_descr(descrs, *iter->short_opt_ch, NULL);
 	if (!descr) {
 		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT;
-		append_string_printf(error, "Unknown option `-%c`",
+		try_append_string_printf(error, "Unknown option `-%c`",
 			*iter->short_opt_ch);
 		goto error;
 	}
@@ -444,7 +449,7 @@ enum parse_orig_arg_opt_ret parse_short_opts(const char * const short_opts,
 		 */
 		if (!opt_arg || (iter->short_opt_ch[1] &&
 				strlen(opt_arg) == 0)) {
-			append_string_printf(error,
+			try_append_string_printf(error,
 				"Missing required argument for option `-%c`",
 				*iter->short_opt_ch);
 			used_next_orig_arg = false;
@@ -509,7 +514,7 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 	const char *long_opt_name = long_opt_arg;
 
 	if (strlen(long_opt_arg) == 0) {
-		append_string_printf(error, "Invalid argument");
+		try_append_string_printf(error, "Invalid argument");
 		goto error;
 	}
 
@@ -520,8 +525,8 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 
 		/* Isolate the option name */
 		if (long_opt_name_size > max_len) {
-			append_string_printf(error, "Invalid argument `--%s`",
-				long_opt_arg);
+			try_append_string_printf(error,
+				"Invalid argument `--%s`", long_opt_arg);
 			goto error;
 		}
 
@@ -533,7 +538,7 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 	/* Find corresponding option descriptor */
 	descr = find_descr(descrs, '\0', long_opt_name);
 	if (!descr) {
-		append_string_printf(error, "Unknown option `--%s`",
+		try_append_string_printf(error, "Unknown option `--%s`",
 			long_opt_name);
 		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT;
 		goto error;
@@ -547,7 +552,7 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		} else {
 			/* `--long-opt arg` style */
 			if (!next_orig_arg) {
-				append_string_printf(error,
+				try_append_string_printf(error,
 					"Missing required argument for option `--%s`",
 					long_opt_name);
 				goto error;
@@ -561,7 +566,7 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		 * Unexpected `--opt=arg` style for a long option which
 		 * doesn't accept an argument.
 		 */
-		append_string_printf(error,
+		try_append_string_printf(error,
 			"Unexpected argument for option `--%s`", long_opt_name);
 		goto error;
 	}
@@ -615,13 +620,17 @@ enum parse_orig_arg_opt_ret parse_orig_arg_opt(const char * const orig_arg,
 }
 
 static
-bool prepend_while_parsing_arg_to_error(char ** const error,
+bool try_prepend_while_parsing_arg_to_error(char ** const error,
 		const unsigned int i, const char * const arg)
 {
 	char *new_error;
 	bool success;
 
-	ARGPAR_ASSERT(error);
+	if (!error) {
+		success = true;
+		goto end;
+	}
+
 	ARGPAR_ASSERT(*error);
 	new_error = argpar_asprintf("While parsing argument #%u (`%s`): %s",
 		i + 1, arg, *error);
@@ -674,7 +683,10 @@ enum argpar_iter_parse_next_status argpar_iter_parse_next(
 	const char *next_orig_arg;
 
 	ARGPAR_ASSERT(iter->i <= iter->argc);
-	*error = NULL;
+
+	if (error) {
+		*error = NULL;
+	}
 
 	if (iter->i == iter->argc) {
 		status = ARGPAR_ITER_PARSE_NEXT_STATUS_END;
@@ -712,11 +724,13 @@ enum argpar_iter_parse_next_status argpar_iter_parse_next(
 		status = ARGPAR_ITER_PARSE_NEXT_STATUS_OK;
 		break;
 	case PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT:
-		prepend_while_parsing_arg_to_error(error, iter->i, orig_arg);
+		try_prepend_while_parsing_arg_to_error(error, iter->i,
+			orig_arg);
 		status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT;
 		break;
 	case PARSE_ORIG_ARG_OPT_RET_ERROR:
-		prepend_while_parsing_arg_to_error(error, iter->i, orig_arg);
+		try_prepend_while_parsing_arg_to_error(error, iter->i,
+			orig_arg);
 		status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR;
 		break;
 	default:

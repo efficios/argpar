@@ -323,8 +323,9 @@ enum argpar_iter_parse_next_status {
  *
  * On failure (status codes
  * `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT` and
- * `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR`), this function sets `*error`
- * to a descriptive error string. Free `*error` with free().
+ * `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR`), this function sets `*error`,
+ * if not `NULL`, to a descriptive error string. Free `*error` with
+ * free().
  *
  * Create an argument parsing iterator with argpar_iter_create().
  */
