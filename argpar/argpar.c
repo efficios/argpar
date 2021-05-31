@@ -63,6 +63,42 @@ struct argpar_iter {
 	const char *short_opt_ch;
 };
 
+/* Base parsing item */
+struct argpar_item {
+	enum argpar_item_type type;
+};
+
+/* Option parsing item */
+struct argpar_item_opt {
+	struct argpar_item base;
+
+	/* Corresponding descriptor */
+	const struct argpar_opt_descr *descr;
+
+	/* Argument, or `NULL` if none; owned by this */
+	char *arg;
+};
+
+/* Non-option parsing item */
+struct argpar_item_non_opt {
+	struct argpar_item base;
+
+	/*
+	 * Complete argument, pointing to one of the entries of the
+	 * original arguments (`argv`).
+	 */
+	const char *arg;
+
+	/*
+	 * Index of this argument amongst all original arguments
+	 * (`argv`).
+	 */
+	unsigned int orig_index;
+
+	/* Index of this argument amongst other non-option arguments */
+	unsigned int non_opt_index;
+};
+
 static __attribute__((format(ARGPAR_PRINTF_FORMAT, 1, 0)))
 char *argpar_vasprintf(const char * const fmt, va_list args)
 {
@@ -137,6 +173,56 @@ end:
 }
 
 ARGPAR_HIDDEN
+enum argpar_item_type argpar_item_type(const struct argpar_item * const item)
+{
+	ARGPAR_ASSERT(item);
+	return item->type;
+}
+
+ARGPAR_HIDDEN
+const struct argpar_opt_descr *argpar_item_opt_descr(
+		const struct argpar_item * const item)
+{
+	ARGPAR_ASSERT(item);
+	ARGPAR_ASSERT(item->type == ARGPAR_ITEM_TYPE_OPT);
+	return ((const struct argpar_item_opt *) item)->descr;
+}
+
+ARGPAR_HIDDEN
+const char *argpar_item_opt_arg(const struct argpar_item * const item)
+{
+	ARGPAR_ASSERT(item);
+	ARGPAR_ASSERT(item->type == ARGPAR_ITEM_TYPE_OPT);
+	return ((const struct argpar_item_opt *) item)->arg;
+}
+
+ARGPAR_HIDDEN
+const char *argpar_item_non_opt_arg(const struct argpar_item * const item)
+{
+	ARGPAR_ASSERT(item);
+	ARGPAR_ASSERT(item->type == ARGPAR_ITEM_TYPE_NON_OPT);
+	return ((const struct argpar_item_non_opt *) item)->arg;
+}
+
+ARGPAR_HIDDEN
+unsigned int argpar_item_non_opt_orig_index(
+		const struct argpar_item * const item)
+{
+	ARGPAR_ASSERT(item);
+	ARGPAR_ASSERT(item->type == ARGPAR_ITEM_TYPE_NON_OPT);
+	return ((const struct argpar_item_non_opt *) item)->orig_index;
+}
+
+ARGPAR_HIDDEN
+unsigned int argpar_item_non_opt_non_opt_index(
+		const struct argpar_item * const item)
+{
+	ARGPAR_ASSERT(item);
+	ARGPAR_ASSERT(item->type == ARGPAR_ITEM_TYPE_NON_OPT);
+	return ((const struct argpar_item_non_opt *) item)->non_opt_index;
+}
+
+ARGPAR_HIDDEN
 void argpar_item_destroy(const struct argpar_item * const item)
 {
 	if (!item) {
@@ -147,7 +233,7 @@ void argpar_item_destroy(const struct argpar_item * const item)
 		struct argpar_item_opt * const opt_item =
 			(struct argpar_item_opt *) item;
 
-		free((void *) opt_item->arg);
+		free(opt_item->arg);
 	}
 
 	free((void *) item);

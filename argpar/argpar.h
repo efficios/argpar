@@ -79,10 +79,10 @@
  * Both argpar_iter_create() and argpar_parse() accept duplicate options
  * (they produce one item for each instance).
  *
- * A returned parsing item has the type `struct argpar_item *`. Each
- * item is to be casted to the appropriate type
- * (`struct argpar_item_opt *` or `struct argpar_item_non_opt *`)
- * depending on its `type` member.
+ * A returned parsing item has the type `const struct argpar_item *`.
+ * Get the type (option or non-option) of an item with
+ * argpar_item_type(). Each item type has its set of dedicated methods
+ * (`argpar_item_opt_` and `argpar_item_non_opt_` prefixes).
  *
  * Both argpar_iter_create() and argpar_parse() produce the items in
  * the same order that the arguments were parsed, including non-option
@@ -144,38 +144,49 @@ enum argpar_item_type {
 	ARGPAR_ITEM_TYPE_NON_OPT,
 };
 
-/* Base item */
-struct argpar_item {
-	enum argpar_item_type type;
-};
+/* Parsing item, as created by argpar_parse() and argpar_iter_parse_next() */
+struct argpar_item;
 
-/* Option item */
-struct argpar_item_opt {
-	struct argpar_item base;
+/*
+ * Returns the type of the parsing item `item`.
+ */
+ARGPAR_HIDDEN
+enum argpar_item_type argpar_item_type(const struct argpar_item *item);
 
-	/* Corresponding descriptor */
-	const struct argpar_opt_descr *descr;
+/*
+ * Returns the option descriptor of the option parsing item `item`.
+ */
+ARGPAR_HIDDEN
+const struct argpar_opt_descr *argpar_item_opt_descr(
+		const struct argpar_item *item);
 
-	/* Argument, or `NULL` if none */
-	const char *arg;
-};
+/*
+ * Returns the argument of the option parsing item `item`, or `NULL` if
+ * none.
+ */
+ARGPAR_HIDDEN
+const char *argpar_item_opt_arg(const struct argpar_item *item);
 
-/* Non-option item */
-struct argpar_item_non_opt {
-	struct argpar_item base;
+/*
+ * Returns the complete argument, pointing to one of the entries of the
+ * original arguments (`argv`), of the non-option parsing item `item`.
+ */
+ARGPAR_HIDDEN
+const char *argpar_item_non_opt_arg(const struct argpar_item *item);
 
-	/*
-	 * Complete argument, pointing to one of the entries of the
-	 * original arguments (`argv`).
-	 */
-	const char *arg;
+/*
+ * Returns the original index, within ALL the original arguments
+ * (`argv`), of the non-option parsing item `item`.
+ */
+ARGPAR_HIDDEN
+unsigned int argpar_item_non_opt_orig_index(const struct argpar_item *item);
 
-	/* Index of this argument amongst all original arguments (`argv`) */
-	unsigned int orig_index;
-
-	/* Index of this argument amongst other non-option arguments */
-	unsigned int non_opt_index;
-};
+/*
+ * Returns the index, within the non-option arguments, of the non-option
+ * parsing item `item`.
+ */
+ARGPAR_HIDDEN
+unsigned int argpar_item_non_opt_non_opt_index(const struct argpar_item *item);
 
 struct argpar_item_array {
 	const struct argpar_item **items;

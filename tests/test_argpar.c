@@ -44,27 +44,26 @@ void append_to_res_str(GString * const res_str,
 		g_string_append_c(res_str, ' ');
 	}
 
-	switch (item->type) {
+	switch (argpar_item_type(item)) {
 	case ARGPAR_ITEM_TYPE_OPT:
 	{
-		const struct argpar_item_opt *const item_opt =
-			(const void *) item;
+		const struct argpar_opt_descr * const descr =
+			argpar_item_opt_descr(item);
+		const char * const arg = argpar_item_opt_arg(item);
 
-		if (item_opt->descr->long_name) {
+		if (descr->long_name) {
 			g_string_append_printf(res_str, "--%s",
-				item_opt->descr->long_name);
+				descr->long_name);
 
-			if (item_opt->arg) {
-				g_string_append_printf(res_str, "=%s",
-					item_opt->arg);
+			if (arg) {
+				g_string_append_printf(res_str, "=%s", arg);
 			}
-		} else if (item_opt->descr->short_name) {
+		} else if (descr->short_name) {
 			g_string_append_printf(res_str, "-%c",
-				item_opt->descr->short_name);
+				descr->short_name);
 
-			if (item_opt->arg) {
-				g_string_append_printf(res_str, " %s",
-					item_opt->arg);
+			if (arg) {
+				g_string_append_printf(res_str, " %s", arg);
 			}
 		}
 
@@ -72,12 +71,14 @@ void append_to_res_str(GString * const res_str,
 	}
 	case ARGPAR_ITEM_TYPE_NON_OPT:
 	{
-		const struct argpar_item_non_opt * const item_non_opt =
-			(const void *) item;
+		const char * const arg = argpar_item_non_opt_arg(item);
+		const unsigned int orig_index =
+			argpar_item_non_opt_orig_index(item);
+		const unsigned int non_opt_index =
+			argpar_item_non_opt_non_opt_index(item);
 
-		g_string_append_printf(res_str, "%s<%u,%u>",
-			item_non_opt->arg, item_non_opt->orig_index,
-			item_non_opt->non_opt_index);
+		g_string_append_printf(res_str, "%s<%u,%u>", arg, orig_index,
+			non_opt_index);
 		break;
 	}
 	default:
