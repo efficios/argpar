@@ -290,7 +290,9 @@ void argpar_parse_ret_fini(struct argpar_parse_ret *ret);
  * actually start parsing the arguments.
  *
  * `*argv` and `*descrs` must NOT change for the lifetime of the
- * returned iterator (until you call argpar_iter_destroy()).
+ * returned iterator (until you call argpar_iter_destroy()) and for the
+ * lifetime of any parsing item (until you call argpar_item_destroy())
+ * argpar_iter_next() creates for the returned iterator.
  *
  * Call argpar_iter_next() with the returned iterator to obtain the next
  * parsing result (item).
