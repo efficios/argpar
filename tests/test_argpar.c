@@ -184,39 +184,39 @@ void test_succeed_argpar_iter(const char * const cmdline,
 	assert(iter);
 
 	for (i = 0; ; i++) {
-		enum argpar_iter_parse_next_status status;
+		enum argpar_iter_next_status status;
 
 		ARGPAR_ITEM_DESTROY_AND_RESET(item);
-		status = argpar_iter_parse_next(iter, &item, &error);
+		status = argpar_iter_next(iter, &item, &error);
 
-		ok(status == ARGPAR_ITER_PARSE_NEXT_STATUS_OK ||
-			status == ARGPAR_ITER_PARSE_NEXT_STATUS_END ||
-			status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT,
-			"argpar_iter_parse_next() returns the expected status "
+		ok(status == ARGPAR_ITER_NEXT_STATUS_OK ||
+			status == ARGPAR_ITER_NEXT_STATUS_END ||
+			status == ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			"argpar_iter_next() returns the expected status "
 			"(%d) for command line `%s` (call %u)",
 			status, cmdline, i + 1);
 
-		if (status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT) {
+		if (status == ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT) {
 			ok(error,
-				"argpar_iter_parse_next() sets an error for "
-				"status `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT` "
+				"argpar_iter_next() sets an error for "
+				"status `ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT` "
 				"and command line `%s` (call %u)",
 				cmdline, i + 1);
 		} else {
 			ok(!error,
-				"argpar_iter_parse_next() doesn't set an error "
+				"argpar_iter_next() doesn't set an error "
 				"for other status than "
-				"`ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT` "
+				"`ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT` "
 				"and command line `%s` (call %u)",
 				cmdline, i + 1);
 		}
 
-		if (status == ARGPAR_ITER_PARSE_NEXT_STATUS_END ||
-				status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT) {
+		if (status == ARGPAR_ITER_NEXT_STATUS_END ||
+				status == ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT) {
 			ok(!item,
-				"argpar_iter_parse_next() doesn't set an item "
-				"for status `ARGPAR_ITER_PARSE_NEXT_STATUS_END` "
-				"or `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT` "
+				"argpar_iter_next() doesn't set an item "
+				"for status `ARGPAR_ITER_NEXT_STATUS_END` "
+				"or `ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT` "
 				"and command line `%s` (call %u)",
 				cmdline, i + 1);
 			break;
@@ -237,7 +237,7 @@ void test_succeed_argpar_iter(const char * const cmdline,
 	}
 
 	ok(strcmp(expected_cmd_line, res_str->str) == 0,
-		"argpar_iter_parse_next() returns the expected parsing items "
+		"argpar_iter_next() returns the expected parsing items "
 		"for command line `%s`", cmdline);
 
 	if (strcmp(expected_cmd_line, res_str->str) != 0) {
@@ -671,7 +671,7 @@ end:
 
 /*
  * Parses `cmdline` with the iterator API using the option descriptors
- * `descrs`, and ensures that argpar_iter_parse_next() fails with status
+ * `descrs`, and ensures that argpar_iter_next() fails with status
  * `expected_status` and that it sets an error which is equal to
  * `expected_error`.
  *
@@ -681,7 +681,7 @@ end:
 static
 void test_fail_argpar_iter(const char * const cmdline,
 		const char * const expected_error,
-		const enum argpar_iter_parse_next_status expected_status,
+		const enum argpar_iter_next_status expected_status,
 		const struct argpar_opt_descr * const descrs)
 {
 	struct argpar_iter *iter = NULL;
@@ -695,46 +695,46 @@ void test_fail_argpar_iter(const char * const cmdline,
 	assert(iter);
 
 	for (i = 0; ; i++) {
-		enum argpar_iter_parse_next_status status;
+		enum argpar_iter_next_status status;
 
 		ARGPAR_ITEM_DESTROY_AND_RESET(item);
-		status = argpar_iter_parse_next(iter, &item, &error);
-		ok(status == ARGPAR_ITER_PARSE_NEXT_STATUS_OK ||
+		status = argpar_iter_next(iter, &item, &error);
+		ok(status == ARGPAR_ITER_NEXT_STATUS_OK ||
 			status == expected_status,
-			"argpar_iter_parse_next() returns the expected status "
+			"argpar_iter_next() returns the expected status "
 			"(%d) for command line `%s` (call %u)",
 			status, cmdline, i + 1);
 
-		if (status != ARGPAR_ITER_PARSE_NEXT_STATUS_OK) {
+		if (status != ARGPAR_ITER_NEXT_STATUS_OK) {
 			ok(!item,
-				"argpar_iter_parse_next() doesn't set an item "
+				"argpar_iter_next() doesn't set an item "
 				"for other status than "
-				"`ARGPAR_ITER_PARSE_NEXT_STATUS_OK` "
+				"`ARGPAR_ITER_NEXT_STATUS_OK` "
 				"and command line `%s` (call %u)",
 				cmdline, i + 1);
 			ok(error,
-				"argpar_iter_parse_next() sets an error for "
+				"argpar_iter_next() sets an error for "
 				"other status than "
-				" `ARGPAR_ITER_PARSE_NEXT_STATUS_OK` "
+				" `ARGPAR_ITER_NEXT_STATUS_OK` "
 				"and command line `%s` (call %u)",
 				cmdline, i + 1);
 			break;
 		}
 
 		ok(item,
-			"argpar_iter_parse_next() sets an item for status "
-			"`ARGPAR_ITER_PARSE_NEXT_STATUS_OK` "
+			"argpar_iter_next() sets an item for status "
+			"`ARGPAR_ITER_NEXT_STATUS_OK` "
 			"and command line `%s` (call %u)",
 			cmdline, i + 1);
 		ok(!error,
-			"argpar_iter_parse_next() doesn't set an error for status "
-			"`ARGPAR_ITER_PARSE_NEXT_STATUS_OK` "
+			"argpar_iter_next() doesn't set an error for status "
+			"`ARGPAR_ITER_NEXT_STATUS_OK` "
 			"and command line `%s` (call %u)",
 			cmdline, i + 1);
 	}
 
 	ok(strcmp(expected_error, error) == 0,
-		"argpar_iter_parse_next() sets the expected error string "
+		"argpar_iter_next() sets the expected error string "
 		"for command line `%s`", cmdline);
 
 	if (strcmp(expected_error, error) != 0) {
@@ -754,7 +754,7 @@ void test_fail_argpar_iter(const char * const cmdline,
  */
 static
 void test_fail(const char * const cmdline, const char * const expected_error,
-		const enum argpar_iter_parse_next_status expected_iter_next_status,
+		const enum argpar_iter_next_status expected_iter_next_status,
 		const struct argpar_opt_descr * const descrs)
 {
 	test_fail_argpar_parse(cmdline, expected_error, descrs);
@@ -775,7 +775,7 @@ void fail_tests(void)
 		test_fail(
 			"--thumb=party --meow",
 			"While parsing argument #2 (`--meow`): Unknown option `--meow`",
-			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
 			descrs);
 	}
 
@@ -789,7 +789,7 @@ void fail_tests(void)
 		test_fail(
 			"--thumb=party -x",
 			"While parsing argument #2 (`-x`): Unknown option `-x`",
-			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
 			descrs);
 	}
 
@@ -803,7 +803,7 @@ void fail_tests(void)
 		test_fail(
 			"--thumb",
 			"While parsing argument #1 (`--thumb`): Missing required argument for option `--thumb`",
-			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
+			ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
 			descrs);
 	}
 
@@ -817,7 +817,7 @@ void fail_tests(void)
 		test_fail(
 			"-k",
 			"While parsing argument #1 (`-k`): Missing required argument for option `-k`",
-			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
+			ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
 			descrs);
 	}
 
@@ -833,7 +833,7 @@ void fail_tests(void)
 		test_fail(
 			"-abc",
 			"While parsing argument #1 (`-abc`): Missing required argument for option `-c`",
-			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
+			ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
 			descrs);
 	}
 
@@ -849,7 +849,7 @@ void fail_tests(void)
 		test_fail(
 			"-ab - -c",
 			"While parsing argument #2 (`-`): Invalid argument",
-			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_INVALID_ARG,
+			ARGPAR_ITER_NEXT_STATUS_ERROR_INVALID_ARG,
 			descrs);
 	}
 
@@ -865,7 +865,7 @@ void fail_tests(void)
 		test_fail(
 			"-ab -- -c",
 			"While parsing argument #2 (`--`): Invalid argument",
-			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_INVALID_ARG,
+			ARGPAR_ITER_NEXT_STATUS_ERROR_INVALID_ARG,
 			descrs);
 	}
 
@@ -878,7 +878,7 @@ void fail_tests(void)
 		test_fail(
 			"--chevre=fromage",
 			"While parsing argument #1 (`--chevre=fromage`): Unexpected argument for option `--chevre`",
-			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG,
+			ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG,
 			descrs);
 	}
 }

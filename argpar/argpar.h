@@ -18,8 +18,8 @@
  *
  * Iterator API:
  *     Create a parsing iterator with argpar_iter_create(), then
- *     repeatedly call argpar_iter_parse_next() to access the parsing
- *     results, until one of:
+ *     repeatedly call argpar_iter_next() to access the parsing results,
+ *     until one of:
  *
  *     * There are no more arguments.
  *
@@ -144,7 +144,7 @@ enum argpar_item_type {
 	ARGPAR_ITEM_TYPE_NON_OPT,
 };
 
-/* Parsing item, as created by argpar_parse() and argpar_iter_parse_next() */
+/* Parsing item, as created by argpar_parse() and argpar_iter_next() */
 struct argpar_item;
 
 /*
@@ -286,8 +286,8 @@ void argpar_parse_ret_fini(struct argpar_parse_ret *ret);
  * `*argv` and `*descrs` must NOT change for the lifetime of the
  * returned iterator (until you call argpar_iter_destroy()).
  *
- * Call argpar_iter_parse_next() with the returned iterator to obtain
- * the next parsing result (item).
+ * Call argpar_iter_next() with the returned iterator to obtain the next
+ * parsing result (item).
  */
 ARGPAR_HIDDEN
 struct argpar_iter *argpar_iter_create(unsigned int argc,
@@ -301,16 +301,16 @@ ARGPAR_HIDDEN
 void argpar_iter_destroy(struct argpar_iter *iter);
 
 /*
- * Return type of argpar_iter_parse_next().
+ * Return type of argpar_iter_next().
  */
-enum argpar_iter_parse_next_status {
-	ARGPAR_ITER_PARSE_NEXT_STATUS_OK,
-	ARGPAR_ITER_PARSE_NEXT_STATUS_END,
-	ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT,
-	ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
-	ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_INVALID_ARG,
-	ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG,
-	ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MEMORY,
+enum argpar_iter_next_status {
+	ARGPAR_ITER_NEXT_STATUS_OK,
+	ARGPAR_ITER_NEXT_STATUS_END,
+	ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+	ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
+	ARGPAR_ITER_NEXT_STATUS_ERROR_INVALID_ARG,
+	ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG,
+	ARGPAR_ITER_NEXT_STATUS_ERROR_MEMORY,
 };
 
 /*
@@ -323,36 +323,36 @@ enum argpar_iter_parse_next_status {
  *
  *   Destroy `*item` with argpar_item_destroy().
  *
- * * Returns `ARGPAR_ITER_PARSE_NEXT_STATUS_OK`.
+ * * Returns `ARGPAR_ITER_NEXT_STATUS_OK`.
  *
  * If there are no more items to return, this function returns
- * `ARGPAR_ITER_PARSE_NEXT_STATUS_END`.
+ * `ARGPAR_ITER_NEXT_STATUS_END`.
  *
  * On failure, this function:
  *
  * * Returns one of:
  *
- *   `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT`:
+ *   `ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT`:
  *       Unknown option (not found in `descrs` as passed to
  *       argpar_iter_create() to create `iter`).
  *
- *   `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MISSING_OPT_ARG`:
+ *   `ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG`:
  *       Missing option argument.
  *
- *   `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_INVALID_ARG`:
+ *   `ARGPAR_ITER_NEXT_STATUS_ERROR_INVALID_ARG`:
  *       Invalid argument.
  *
- *   `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG`:
+ *   `ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG`:
  *       Unexpected option argument.
  *
- *   `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MEMORY`:
+ *   `ARGPAR_ITER_NEXT_STATUS_ERROR_MEMORY`:
  *       Memory error.
  *
- * * Except for the `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MEMORY` status,
+ * * Except for the `ARGPAR_ITER_NEXT_STATUS_ERROR_MEMORY` status,
  *   sets `*error`, if not `NULL`, to a descriptive error string.
  *   Free `*error` with free().
  */
-enum argpar_iter_parse_next_status argpar_iter_parse_next(
+enum argpar_iter_next_status argpar_iter_next(
 		struct argpar_iter *iter, const struct argpar_item **item,
 		char **error);
 
@@ -365,7 +365,7 @@ ARGPAR_HIDDEN
 unsigned int argpar_iter_get_ingested_orig_args(const struct argpar_iter *iter);
 
 /*
- * Destroys `item`, as created by argpar_iter_parse_next().
+ * Destroys `item`, as created by argpar_iter_next().
  */
 ARGPAR_HIDDEN
 void argpar_item_destroy(const struct argpar_item *item);
