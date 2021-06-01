@@ -1,4 +1,4 @@
-AC_INIT([argpar], [1])
+AC_INIT([argpar], [0.1.0])
 AM_INIT_AUTOMAKE([foreign])
 LT_INIT
 
