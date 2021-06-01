@@ -400,7 +400,7 @@ enum parse_orig_arg_opt_ret {
 	PARSE_ORIG_ARG_OPT_RET_OK,
 	PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT = -1,
 	PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG = -2,
-	PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_OPT = -3,
+	PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_ARG = -3,
 	PARSE_ORIG_ARG_OPT_RET_ERROR_UNEXPECTED_OPT_ARG = -4,
 	PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY = -5,
 };
@@ -420,7 +420,7 @@ enum parse_orig_arg_opt_ret parse_short_opts(const char * const short_opts,
 
 	if (strlen(short_opts) == 0) {
 		try_append_string_printf(error, "Invalid argument");
-		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_OPT;
+		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_ARG;
 		goto error;
 	}
 
@@ -519,7 +519,7 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 
 	if (strlen(long_opt_arg) == 0) {
 		try_append_string_printf(error, "Invalid argument");
-		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_OPT;
+		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_ARG;
 		goto error;
 	}
 
@@ -532,7 +532,7 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		if (long_opt_name_size > max_len) {
 			try_append_string_printf(error,
 				"Invalid argument `--%s`", long_opt_arg);
-			ret = PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_OPT;
+			ret = PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_ARG;
 			goto error;
 		}
 
@@ -710,7 +710,7 @@ enum argpar_iter_parse_next_status argpar_iter_parse_next(
 				iter->non_opt_index);
 
 		if (!non_opt_item) {
-			status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR;
+			status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MEMORY;
 			goto end;
 		}
 
@@ -730,17 +730,32 @@ enum argpar_iter_parse_next_status argpar_iter_parse_next(
 		status = ARGPAR_ITER_PARSE_NEXT_STATUS_OK;
 		break;
 	case PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT:
-		try_prepend_while_parsing_arg_to_error(error, iter->i,
-			orig_arg);
-		status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT;
-		break;
 	case PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG:
-	case PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_OPT:
+	case PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_ARG:
 	case PARSE_ORIG_ARG_OPT_RET_ERROR_UNEXPECTED_OPT_ARG:
-	case PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY:
 		try_prepend_while_parsing_arg_to_error(error, iter->i,
 			orig_arg);
-		status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR;
+
+		switch (parse_orig_arg_opt_ret) {
+		case PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT:
+			status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT;
+			break;
+		case PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG:
+			status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MISSING_OPT_ARG;
+			break;
+		case PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_ARG:
+			status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_INVALID_ARG;
+			break;
+		case PARSE_ORIG_ARG_OPT_RET_ERROR_UNEXPECTED_OPT_ARG:
+			status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG;
+			break;
+		default:
+			abort();
+		}
+
+		break;
+	case PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY:
+		status = ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MEMORY;
 		break;
 	default:
 		abort();
@@ -785,11 +800,13 @@ struct argpar_parse_ret argpar_parse(const unsigned int argc,
 		const enum argpar_iter_parse_next_status status =
 			argpar_iter_parse_next(iter, &item, &parse_ret.error);
 
-		if (status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR) {
+		switch (status) {
+		case ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MISSING_OPT_ARG:
+		case ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_INVALID_ARG:
+		case ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG:
+		case ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MEMORY:
 			goto error;
-		} else if (status == ARGPAR_ITER_PARSE_NEXT_STATUS_END) {
-			break;
-		} else if (status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT) {
+		case ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT:
 			if (fail_on_unknown_opt) {
 				parse_ret.ingested_orig_args =
 					argpar_iter_get_ingested_orig_args(iter);
@@ -798,10 +815,13 @@ struct argpar_parse_ret argpar_parse(const unsigned int argc,
 
 			free(parse_ret.error);
 			parse_ret.error = NULL;
+			goto success;
+		case ARGPAR_ITER_PARSE_NEXT_STATUS_END:
+			goto success;
+		default:
+			ARGPAR_ASSERT(status == ARGPAR_ITER_PARSE_NEXT_STATUS_OK);
 			break;
 		}
-
-		ARGPAR_ASSERT(status == ARGPAR_ITER_PARSE_NEXT_STATUS_OK);
 
 		if (!push_item(parse_ret.items, item)) {
 			goto error;
@@ -810,6 +830,7 @@ struct argpar_parse_ret argpar_parse(const unsigned int argc,
 		item = NULL;
 	}
 
+success:
 	ARGPAR_ASSERT(!parse_ret.error);
 	parse_ret.ingested_orig_args = argpar_iter_get_ingested_orig_args(iter);
 	goto end;

@@ -307,27 +307,50 @@ enum argpar_iter_parse_next_status {
 	ARGPAR_ITER_PARSE_NEXT_STATUS_OK,
 	ARGPAR_ITER_PARSE_NEXT_STATUS_END,
 	ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT,
-	ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR,
+	ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
+	ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_INVALID_ARG,
+	ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG,
+	ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MEMORY,
 };
 
 /*
  * Parses and returns the next item from `iter`.
  *
- * On success, this function sets `*item` to an item which describes the
- * next option or non-option argument and returns
- * `ARGPAR_ITER_PARSE_NEXT_STATUS_OK`. Destroy `*item` with
- * argpar_item_destroy().
+ * On success, this function:
+ *
+ * * Sets `*item` to a parsing item which describes the next option
+ *   or non-option argument.
+ *
+ *   Destroy `*item` with argpar_item_destroy().
+ *
+ * * Returns `ARGPAR_ITER_PARSE_NEXT_STATUS_OK`.
  *
  * If there are no more items to return, this function returns
  * `ARGPAR_ITER_PARSE_NEXT_STATUS_END`.
  *
- * On failure (status codes
- * `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT` and
- * `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR`), this function sets `*error`,
- * if not `NULL`, to a descriptive error string. Free `*error` with
- * free().
+ * On failure, this function:
  *
- * Create an argument parsing iterator with argpar_iter_create().
+ * * Returns one of:
+ *
+ *   `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT`:
+ *       Unknown option (not found in `descrs` as passed to
+ *       argpar_iter_create() to create `iter`).
+ *
+ *   `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MISSING_OPT_ARG`:
+ *       Missing option argument.
+ *
+ *   `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_INVALID_ARG`:
+ *       Invalid argument.
+ *
+ *   `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG`:
+ *       Unexpected option argument.
+ *
+ *   `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MEMORY`:
+ *       Memory error.
+ *
+ * * Except for the `ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MEMORY` status,
+ *   sets `*error`, if not `NULL`, to a descriptive error string.
+ *   Free `*error` with free().
  */
 enum argpar_iter_parse_next_status argpar_iter_parse_next(
 		struct argpar_iter *iter, const struct argpar_item **item,

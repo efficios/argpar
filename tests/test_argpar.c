@@ -671,8 +671,9 @@ end:
 
 /*
  * Parses `cmdline` with the iterator API using the option descriptors
- * `descrs`, and ensures that argpar_iter_parse_next() fails and that it
- * sets an error which is equal to `expected_error`.
+ * `descrs`, and ensures that argpar_iter_parse_next() fails with status
+ * `expected_status` and that it sets an error which is equal to
+ * `expected_error`.
  *
  * This function splits `cmdline` on spaces to create an original
  * argument array.
@@ -680,6 +681,7 @@ end:
 static
 void test_fail_argpar_iter(const char * const cmdline,
 		const char * const expected_error,
+		const enum argpar_iter_parse_next_status expected_status,
 		const struct argpar_opt_descr * const descrs)
 {
 	struct argpar_iter *iter = NULL;
@@ -697,10 +699,8 @@ void test_fail_argpar_iter(const char * const cmdline,
 
 		ARGPAR_ITEM_DESTROY_AND_RESET(item);
 		status = argpar_iter_parse_next(iter, &item, &error);
-
 		ok(status == ARGPAR_ITER_PARSE_NEXT_STATUS_OK ||
-			status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR ||
-			status == ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			status == expected_status,
 			"argpar_iter_parse_next() returns the expected status "
 			"(%d) for command line `%s` (call %u)",
 			status, cmdline, i + 1);
@@ -754,10 +754,12 @@ void test_fail_argpar_iter(const char * const cmdline,
  */
 static
 void test_fail(const char * const cmdline, const char * const expected_error,
+		const enum argpar_iter_parse_next_status expected_iter_next_status,
 		const struct argpar_opt_descr * const descrs)
 {
 	test_fail_argpar_parse(cmdline, expected_error, descrs);
-	test_fail_argpar_iter(cmdline, expected_error, descrs);
+	test_fail_argpar_iter(cmdline, expected_error,
+		expected_iter_next_status, descrs);
 }
 
 static
@@ -773,6 +775,7 @@ void fail_tests(void)
 		test_fail(
 			"--thumb=party --meow",
 			"While parsing argument #2 (`--meow`): Unknown option `--meow`",
+			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT,
 			descrs);
 	}
 
@@ -786,6 +789,7 @@ void fail_tests(void)
 		test_fail(
 			"--thumb=party -x",
 			"While parsing argument #2 (`-x`): Unknown option `-x`",
+			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNKNOWN_OPT,
 			descrs);
 	}
 
@@ -799,6 +803,7 @@ void fail_tests(void)
 		test_fail(
 			"--thumb",
 			"While parsing argument #1 (`--thumb`): Missing required argument for option `--thumb`",
+			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
 			descrs);
 	}
 
@@ -812,6 +817,7 @@ void fail_tests(void)
 		test_fail(
 			"-k",
 			"While parsing argument #1 (`-k`): Missing required argument for option `-k`",
+			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
 			descrs);
 	}
 
@@ -827,6 +833,7 @@ void fail_tests(void)
 		test_fail(
 			"-abc",
 			"While parsing argument #1 (`-abc`): Missing required argument for option `-c`",
+			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
 			descrs);
 	}
 
@@ -842,6 +849,7 @@ void fail_tests(void)
 		test_fail(
 			"-ab - -c",
 			"While parsing argument #2 (`-`): Invalid argument",
+			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_INVALID_ARG,
 			descrs);
 	}
 
@@ -857,6 +865,7 @@ void fail_tests(void)
 		test_fail(
 			"-ab -- -c",
 			"While parsing argument #2 (`--`): Invalid argument",
+			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_INVALID_ARG,
 			descrs);
 	}
 
@@ -869,6 +878,7 @@ void fail_tests(void)
 		test_fail(
 			"--chevre=fromage",
 			"While parsing argument #1 (`--chevre=fromage`): Unexpected argument for option `--chevre`",
+			ARGPAR_ITER_PARSE_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG,
 			descrs);
 	}
 }
