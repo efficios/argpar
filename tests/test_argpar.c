@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
 #include <glib.h>
@@ -650,6 +651,34 @@ void succeed_tests(void)
 			"-f --<1,0> -f",
 			descrs, 3);
 	}
+
+	/* Very long name of long option */
+	{
+		const char opt_name[] =
+			"kale-chips-waistcoat-yr-bicycle-rights-gochujang-"
+			"woke-tumeric-flexitarian-biodiesel-chillwave-cliche-"
+			"ethical-cardigan-listicle-pok-pok-sustainable-live-"
+			"edge-jianbing-gochujang-butcher-disrupt-tattooed-"
+			"tumeric-prism-photo-booth-vape-kogi-jean-shorts-"
+			"blog-williamsburg-fingerstache-palo-santo-artisan-"
+			"affogato-occupy-skateboard-adaptogen-neutra-celiac-"
+			"put-a-bird-on-it-kombucha-everyday-carry-hot-chicken-"
+			"craft-beer-subway-tile-tote-bag-disrupt-selvage-"
+			"raclette-art-party-readymade-paleo-heirloom-trust-"
+			"fund-small-batch-kinfolk-woke-cardigan-prism-"
+			"chambray-la-croix-hashtag-unicorn-edison-bulb-tbh-"
+			"cornhole-cliche-tattooed-green-juice-adaptogen-"
+			"kitsch-lo-fi-vexillologist-migas-gentrify-"
+			"viral-raw-denim";
+		const struct argpar_opt_descr descrs[] = {
+			{ 0, '\0', opt_name, true },
+			ARGPAR_OPT_DESCR_SENTINEL
+		};
+		char cmdline[1024];
+
+		sprintf(cmdline, "--%s=23", opt_name);
+		test_succeed(cmdline, cmdline, descrs, 1);
+	}
 }
 
 /*
@@ -880,7 +909,7 @@ void fail_tests(void)
 
 int main(void)
 {
-	plan_tests(423);
+	plan_tests(434);
 	succeed_tests();
 	fail_tests();
 	return exit_status();

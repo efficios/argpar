@@ -61,6 +61,12 @@ struct argpar_iter {
 	 * argpar_iter_next() call.
 	 */
 	const char *short_opt_ch;
+
+	/* Temporary character buffer which only grows */
+	struct {
+		size_t size;
+		char *data;
+	} tmp_buf;
 };
 
 /* Base parsing item */
@@ -400,7 +406,6 @@ enum parse_orig_arg_opt_ret {
 	PARSE_ORIG_ARG_OPT_RET_OK,
 	PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT = -1,
 	PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG = -2,
-	PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_ARG = -3,
 	PARSE_ORIG_ARG_OPT_RET_ERROR_UNEXPECTED_OPT_ARG = -4,
 	PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY = -5,
 };
@@ -495,7 +500,6 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		struct argpar_iter * const iter,
 		char ** const error, struct argpar_item ** const item)
 {
-	const size_t max_len = 127;
 	enum parse_orig_arg_opt_ret ret = PARSE_ORIG_ARG_OPT_RET_OK;
 	const struct argpar_opt_descr *descr;
 	struct argpar_item_opt *opt_item;
@@ -506,9 +510,6 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 
 	/* Position of first `=`, if any */
 	const char *eq_pos;
-
-	/* Buffer holding option name when `long_opt_arg` contains `=` */
-	char buf[max_len + 1];
 
 	/* Option name */
 	const char *long_opt_name = long_opt_arg;
@@ -521,16 +522,19 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		const size_t long_opt_name_size = eq_pos - long_opt_arg;
 
 		/* Isolate the option name */
-		if (long_opt_name_size > max_len) {
-			try_append_string_printf(error,
-				"Invalid argument `--%s`", long_opt_arg);
-			ret = PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_ARG;
-			goto error;
+		while (long_opt_name_size > iter->tmp_buf.size - 1) {
+			iter->tmp_buf.size *= 2;
+			iter->tmp_buf.data = ARGPAR_REALLOC(iter->tmp_buf.data,
+				char, iter->tmp_buf.size);
+			if (!iter->tmp_buf.data) {
+				ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY;
+				goto error;
+			}
 		}
 
-		memcpy(buf, long_opt_arg, long_opt_name_size);
-		buf[long_opt_name_size] = '\0';
-		long_opt_name = buf;
+		memcpy(iter->tmp_buf.data, long_opt_arg, long_opt_name_size);
+		iter->tmp_buf.data[long_opt_name_size] = '\0';
+		long_opt_name = iter->tmp_buf.data;
 	}
 
 	/* Find corresponding option descriptor */
@@ -650,7 +654,7 @@ struct argpar_iter *argpar_iter_create(const unsigned int argc,
 		const char * const * const argv,
 		const struct argpar_opt_descr * const descrs)
 {
-	struct argpar_iter * const iter = ARGPAR_ZALLOC(struct argpar_iter);
+	struct argpar_iter *iter = ARGPAR_ZALLOC(struct argpar_iter);
 
 	if (!iter) {
 		goto end;
@@ -659,6 +663,13 @@ struct argpar_iter *argpar_iter_create(const unsigned int argc,
 	iter->argc = argc;
 	iter->argv = argv;
 	iter->descrs = descrs;
+	iter->tmp_buf.size = 128;
+	iter->tmp_buf.data = ARGPAR_CALLOC(char, iter->tmp_buf.size);
+	if (!iter->tmp_buf.data) {
+		argpar_iter_destroy(iter);
+		iter = NULL;
+		goto end;
+	}
 
 end:
 	return iter;
@@ -667,7 +678,10 @@ end:
 ARGPAR_HIDDEN
 void argpar_iter_destroy(struct argpar_iter * const iter)
 {
-	free(iter);
+	if (iter) {
+		free(iter->tmp_buf.data);
+		free(iter);
+	}
 }
 
 ARGPAR_HIDDEN
@@ -724,7 +738,6 @@ enum argpar_iter_next_status argpar_iter_next(
 		break;
 	case PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT:
 	case PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG:
-	case PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_ARG:
 	case PARSE_ORIG_ARG_OPT_RET_ERROR_UNEXPECTED_OPT_ARG:
 		try_prepend_while_parsing_arg_to_error(error, iter->i,
 			orig_arg);
@@ -735,9 +748,6 @@ enum argpar_iter_next_status argpar_iter_next(
 			break;
 		case PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG:
 			status = ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG;
-			break;
-		case PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_ARG:
-			status = ARGPAR_ITER_NEXT_STATUS_ERROR_INVALID_ARG;
 			break;
 		case PARSE_ORIG_ARG_OPT_RET_ERROR_UNEXPECTED_OPT_ARG:
 			status = ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG;
@@ -795,7 +805,6 @@ struct argpar_parse_ret argpar_parse(const unsigned int argc,
 
 		switch (status) {
 		case ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG:
-		case ARGPAR_ITER_NEXT_STATUS_ERROR_INVALID_ARG:
 		case ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG:
 		case ARGPAR_ITER_NEXT_STATUS_ERROR_MEMORY:
 			goto error;
