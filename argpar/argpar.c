@@ -418,11 +418,7 @@ enum parse_orig_arg_opt_ret parse_short_opts(const char * const short_opts,
 	const struct argpar_opt_descr *descr;
 	struct argpar_item_opt *opt_item;
 
-	if (strlen(short_opts) == 0) {
-		try_append_string_printf(error, "Invalid argument");
-		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_ARG;
-		goto error;
-	}
+	ARGPAR_ASSERT(strlen(short_opts) != 0);
 
 	if (!iter->short_opt_ch) {
 		iter->short_opt_ch = short_opts;
@@ -517,11 +513,7 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 	/* Option name */
 	const char *long_opt_name = long_opt_arg;
 
-	if (strlen(long_opt_arg) == 0) {
-		try_append_string_printf(error, "Invalid argument");
-		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_INVALID_ARG;
-		goto error;
-	}
+	ARGPAR_ASSERT(strlen(long_opt_arg) != 0);
 
 	/* Find the first `=` in original argument */
 	eq_pos = strchr(long_opt_arg, '=');
@@ -703,9 +695,10 @@ enum argpar_iter_next_status argpar_iter_next(
 	next_orig_arg =
 		iter->i < (iter->argc - 1) ? iter->argv[iter->i + 1] : NULL;
 
-	if (orig_arg[0] != '-') {
+	if (strcmp(orig_arg, "-") == 0 || strcmp(orig_arg, "--") == 0 ||
+			orig_arg[0] != '-') {
 		/* Non-option argument */
-		struct argpar_item_non_opt * const non_opt_item =
+		const struct argpar_item_non_opt * const non_opt_item =
 			create_non_opt_item(orig_arg, iter->i,
 				iter->non_opt_index);
 

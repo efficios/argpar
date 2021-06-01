@@ -67,10 +67,7 @@
  *
  * * Non-option arguments (anything else).
  *
- * The argpar parsers don't accept `-` or `--` as arguments. The latter
- * means "end of options" for many command-line tools, but this library
- * is all about keeping the order of the arguments, so it doesn't mean
- * much to put them at the end. This has the side effect that a
+ * The argpar parsers parse `-` and `--` as non-option arguments. A
  * non-option argument cannot have the form of an option, for example if
  * you need to pass the exact relative path `--component`. In that case,
  * you would need to pass `./--component`. There's no generic way to
@@ -128,7 +125,7 @@ struct argpar_opt_descr {
 	/* Short option character, or `\0` */
 	const char short_name;
 
-	/* Long option name (without `--`), or `NULL` */
+	/* Long option name (without the `--` prefix), or `NULL` */
 	const char * const long_name;
 
 	/* True if this option has an argument */

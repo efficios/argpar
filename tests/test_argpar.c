@@ -624,6 +624,32 @@ void succeed_tests(void)
 			"-f --yeah= -f",
 			descrs, 3);
 	}
+
+	/* `-` non-option argument */
+	{
+		const struct argpar_opt_descr descrs[] = {
+			{ 0, 'f', NULL, false },
+			ARGPAR_OPT_DESCR_SENTINEL
+		};
+
+		test_succeed(
+			"-f - -f",
+			"-f -<1,0> -f",
+			descrs, 3);
+	}
+
+	/* `--` non-option argument */
+	{
+		const struct argpar_opt_descr descrs[] = {
+			{ 0, 'f', NULL, false },
+			ARGPAR_OPT_DESCR_SENTINEL
+		};
+
+		test_succeed(
+			"-f -- -f",
+			"-f --<1,0> -f",
+			descrs, 3);
+	}
 }
 
 /*
@@ -837,38 +863,7 @@ void fail_tests(void)
 			descrs);
 	}
 
-	/* Invalid `-` */
-	{
-		const struct argpar_opt_descr descrs[] = {
-			{ 0, 'a', NULL, false },
-			{ 0, 'b', NULL, false },
-			{ 0, 'c', NULL, true },
-			ARGPAR_OPT_DESCR_SENTINEL
-		};
-
-		test_fail(
-			"-ab - -c",
-			"While parsing argument #2 (`-`): Invalid argument",
-			ARGPAR_ITER_NEXT_STATUS_ERROR_INVALID_ARG,
-			descrs);
-	}
-
-	/* Invalid `--` */
-	{
-		const struct argpar_opt_descr descrs[] = {
-			{ 0, 'a', NULL, false },
-			{ 0, 'b', NULL, false },
-			{ 0, 'c', NULL, true },
-			ARGPAR_OPT_DESCR_SENTINEL
-		};
-
-		test_fail(
-			"-ab -- -c",
-			"While parsing argument #2 (`--`): Invalid argument",
-			ARGPAR_ITER_NEXT_STATUS_ERROR_INVALID_ARG,
-			descrs);
-	}
-
+	/* Unexpected long option argument */
 	{
 		const struct argpar_opt_descr descrs[] = {
 			{ 0, 'c', "chevre", false },
@@ -885,7 +880,7 @@ void fail_tests(void)
 
 int main(void)
 {
-	plan_tests(419);
+	plan_tests(423);
 	succeed_tests();
 	fail_tests();
 	return exit_status();
