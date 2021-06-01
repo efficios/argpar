@@ -188,6 +188,12 @@ unsigned int argpar_item_non_opt_orig_index(const struct argpar_item *item);
 ARGPAR_HIDDEN
 unsigned int argpar_item_non_opt_non_opt_index(const struct argpar_item *item);
 
+/*
+ * Destroys `item`, as created by argpar_iter_next().
+ */
+ARGPAR_HIDDEN
+void argpar_item_destroy(const struct argpar_item *item);
+
 struct argpar_item_array {
 	const struct argpar_item **items;
 
@@ -363,12 +369,6 @@ enum argpar_iter_next_status argpar_iter_next(
  */
 ARGPAR_HIDDEN
 unsigned int argpar_iter_ingested_orig_args(const struct argpar_iter *iter);
-
-/*
- * Destroys `item`, as created by argpar_iter_next().
- */
-ARGPAR_HIDDEN
-void argpar_item_destroy(const struct argpar_item *item);
 
 /*
  * Destroys `_item` (`const struct argpar_item *`) and sets it to
