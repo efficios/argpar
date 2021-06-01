@@ -225,9 +225,9 @@ void test_succeed_argpar_iter(const char * const cmdline,
 		append_to_res_str(res_str, item);
 	}
 
-	actual_ingested_orig_args = argpar_iter_get_ingested_orig_args(iter);
+	actual_ingested_orig_args = argpar_iter_ingested_orig_args(iter);
 	ok(actual_ingested_orig_args == expected_ingested_orig_args,
-		"argpar_iter_get_ingested_orig_args() returns the expected "
+		"argpar_iter_ingested_orig_args() returns the expected "
 		"number of ingested original arguments for command line `%s`",
 		cmdline);
 

@@ -766,7 +766,7 @@ end:
 }
 
 ARGPAR_HIDDEN
-unsigned int argpar_iter_get_ingested_orig_args(
+unsigned int argpar_iter_ingested_orig_args(
 		const struct argpar_iter * const iter)
 {
 	return iter->i;
@@ -809,7 +809,7 @@ struct argpar_parse_ret argpar_parse(const unsigned int argc,
 		case ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT:
 			if (fail_on_unknown_opt) {
 				parse_ret.ingested_orig_args =
-					argpar_iter_get_ingested_orig_args(iter);
+					argpar_iter_ingested_orig_args(iter);
 				goto error;
 			}
 
@@ -832,7 +832,7 @@ struct argpar_parse_ret argpar_parse(const unsigned int argc,
 
 success:
 	ARGPAR_ASSERT(!parse_ret.error);
-	parse_ret.ingested_orig_args = argpar_iter_get_ingested_orig_args(iter);
+	parse_ret.ingested_orig_args = argpar_iter_ingested_orig_args(iter);
 	goto end;
 
 error:

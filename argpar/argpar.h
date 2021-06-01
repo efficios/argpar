@@ -362,7 +362,7 @@ enum argpar_iter_next_status argpar_iter_next(
  * the previously returned items.
  */
 ARGPAR_HIDDEN
-unsigned int argpar_iter_get_ingested_orig_args(const struct argpar_iter *iter);
+unsigned int argpar_iter_ingested_orig_args(const struct argpar_iter *iter);
 
 /*
  * Destroys `item`, as created by argpar_iter_next().
