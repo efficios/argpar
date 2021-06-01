@@ -47,6 +47,7 @@ AM_CFLAGS="${AM_CFLAGS} ${WARN_CFLAGS}"
 AC_SUBST(AM_CFLAGS)
 
 AC_CONFIG_FILES([
+	Doxyfile
 	Makefile
 	argpar/Makefile
 	tests/Makefile

@@ -1,0 +1,17 @@
+PROJECT_NAME           = argpar
+PROJECT_NUMBER         = @PACKAGE_VERSION@
+PROJECT_BRIEF          = "Position-aware command-line argument parsing library"
+OUTPUT_DIRECTORY       = api-doc
+OPTIMIZE_OUTPUT_FOR_C  = YES
+HIDE_SCOPE_NAMES       = YES
+INPUT                  = argpar
+FILE_PATTERNS          = *.h
+HTML_COLORSTYLE_HUE    = 336
+HTML_COLORSTYLE_SAT    = 100
+HTML_COLORSTYLE_GAMMA  = 100
+GENERATE_LATEX         = NO
+CLASS_DIAGRAMS         = NO
+HIDE_UNDOC_MEMBERS     = YES
+MULTILINE_CPP_IS_BRIEF = YES
+ALWAYS_DETAILED_SEC    = YES
+MAX_INITIALIZER_LINES  = 0
