@@ -88,7 +88,7 @@ void append_to_res_str(GString * const res_str,
 }
 
 /*
- * Parses `cmdline` with argpar_parse() using the option descriptors
+ * Parses `cmdline` with the argpar API using the option descriptors
  * `descrs`, and ensures that the resulting effective command line is
  * `expected_cmd_line` and that the number of ingested original
  * arguments is `expected_ingested_orig_args`.
@@ -100,73 +100,7 @@ void append_to_res_str(GString * const res_str,
  * by space-separating each formatted item (see append_to_res_str()).
  */
 static
-void test_succeed_argpar_parse(const char * const cmdline,
-		const char * const expected_cmd_line,
-		const struct argpar_opt_descr * const descrs,
-		const unsigned int expected_ingested_orig_args)
-{
-	struct argpar_parse_ret parse_ret;
-	GString * const res_str = g_string_new(NULL);
-	gchar ** const argv = g_strsplit(cmdline, " ", 0);
-	unsigned int i;
-
-	assert(argv);
-	assert(res_str);
-	parse_ret = argpar_parse(g_strv_length(argv),
-		(const char * const *) argv, descrs, false);
-	ok(parse_ret.items,
-		"argpar_parse() succeeds for command line `%s`", cmdline);
-	ok(!parse_ret.error,
-		"argpar_parse() doesn't set an error for command line `%s`",
-		cmdline);
-	ok(parse_ret.ingested_orig_args == expected_ingested_orig_args,
-		"argpar_parse() returns the correct number of ingested "
-		"original arguments for command line `%s`", cmdline);
-
-	if (parse_ret.ingested_orig_args != expected_ingested_orig_args) {
-		diag("Expected: %u    Got: %u", expected_ingested_orig_args,
-			parse_ret.ingested_orig_args);
-	}
-
-	if (!parse_ret.items) {
-		fail("argpar_parse() returns the expected parsing items "
-			"for command line `%s`", cmdline);
-		goto end;
-	}
-
-	for (i = 0; i < parse_ret.items->n_items; i++) {
-		append_to_res_str(res_str, parse_ret.items->items[i]);
-	}
-
-	ok(strcmp(expected_cmd_line, res_str->str) == 0,
-		"argpar_parse() returns the expected parsed arguments "
-		"for command line `%s`", cmdline);
-
-	if (strcmp(expected_cmd_line, res_str->str) != 0) {
-		diag("Expected: `%s`", expected_cmd_line);
-		diag("Got:      `%s`", res_str->str);
-	}
-
-end:
-	argpar_parse_ret_fini(&parse_ret);
-	g_string_free(res_str, TRUE);
-	g_strfreev(argv);
-}
-
-/*
- * Parses `cmdline` with the iterator API using the option descriptors
- * `descrs`, and ensures that the resulting effective command line is
- * `expected_cmd_line` and that the number of ingested original
- * arguments is `expected_ingested_orig_args`.
- *
- * This function splits `cmdline` on spaces to create an original
- * argument array.
- *
- * This function builds the resulting command line from parsing items
- * by space-separating each formatted item (see append_to_res_str()).
- */
-static
-void test_succeed_argpar_iter(const char * const cmdline,
+void test_succeed(const char * const cmdline,
 		const char * const expected_cmd_line,
 		const struct argpar_opt_descr * const descrs,
 		const unsigned int expected_ingested_orig_args)
@@ -251,22 +185,6 @@ void test_succeed_argpar_iter(const char * const cmdline,
 	g_string_free(res_str, TRUE);
 	g_strfreev(argv);
 	free(error);
-}
-
-/*
- * Calls test_succeed_argpar_parse() and test_succeed_argpar_iter()
- * with the provided parameters.
- */
-static
-void test_succeed(const char * const cmdline,
-		const char * const expected_cmd_line,
-		const struct argpar_opt_descr * const descrs,
-		const unsigned int expected_ingested_orig_args)
-{
-	test_succeed_argpar_parse(cmdline, expected_cmd_line, descrs,
-		expected_ingested_orig_args);
-	test_succeed_argpar_iter(cmdline, expected_cmd_line, descrs,
-		expected_ingested_orig_args);
 }
 
 static
@@ -682,50 +600,7 @@ void succeed_tests(void)
 }
 
 /*
- * Parses `cmdline` with argpar_parse() using the option descriptors
- * `descrs`, and ensures that the function fails and that it sets an
- * error which is equal to `expected_error`.
- *
- * This function splits `cmdline` on spaces to create an original
- * argument array.
- */
-static
-void test_fail_argpar_parse(const char * const cmdline,
-		const char * const expected_error,
-		const struct argpar_opt_descr * const descrs)
-{
-	struct argpar_parse_ret parse_ret;
-	gchar ** const argv = g_strsplit(cmdline, " ", 0);
-
-	parse_ret = argpar_parse(g_strv_length(argv),
-		(const char * const *) argv, descrs, true);
-	ok(!parse_ret.items,
-		"argpar_parse() fails for command line `%s`", cmdline);
-	ok(parse_ret.error,
-		"argpar_parse() sets an error string for command line `%s`",
-		cmdline);
-
-	if (parse_ret.items) {
-		fail("argpar_parse() sets the expected error string");
-		goto end;
-	}
-
-	ok(strcmp(expected_error, parse_ret.error) == 0,
-		"argpar_parse() sets the expected error string "
-		"for command line `%s`", cmdline);
-
-	if (strcmp(expected_error, parse_ret.error) != 0) {
-		diag("Expected: `%s`", expected_error);
-		diag("Got:      `%s`", parse_ret.error);
-	}
-
-end:
-	argpar_parse_ret_fini(&parse_ret);
-	g_strfreev(argv);
-}
-
-/*
- * Parses `cmdline` with the iterator API using the option descriptors
+ * Parses `cmdline` with the argpar API using the option descriptors
  * `descrs`, and ensures that argpar_iter_next() fails with status
  * `expected_status` and that it sets an error which is equal to
  * `expected_error`.
@@ -734,8 +609,7 @@ end:
  * argument array.
  */
 static
-void test_fail_argpar_iter(const char * const cmdline,
-		const char * const expected_error,
+void test_fail(const char * const cmdline, const char * const expected_error,
 		const enum argpar_iter_next_status expected_status,
 		const struct argpar_opt_descr * const descrs)
 {
@@ -801,20 +675,6 @@ void test_fail_argpar_iter(const char * const cmdline,
 	argpar_iter_destroy(iter);
 	free(error);
 	g_strfreev(argv);
-}
-
-/*
- * Calls test_fail_argpar_parse() and test_fail_argpar_iter() with the
- * provided parameters.
- */
-static
-void test_fail(const char * const cmdline, const char * const expected_error,
-		const enum argpar_iter_next_status expected_iter_next_status,
-		const struct argpar_opt_descr * const descrs)
-{
-	test_fail_argpar_parse(cmdline, expected_error, descrs);
-	test_fail_argpar_iter(cmdline, expected_error,
-		expected_iter_next_status, descrs);
 }
 
 static
@@ -909,7 +769,7 @@ void fail_tests(void)
 
 int main(void)
 {
-	plan_tests(434);
+	plan_tests(296);
 	succeed_tests();
 	fail_tests();
 	return exit_status();
