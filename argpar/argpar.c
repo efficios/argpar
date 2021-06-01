@@ -55,12 +55,12 @@ struct argpar_iter {
 	int non_opt_index;
 
 	/*
-	 * Current character of the current short option group: if it's
-	 * not `NULL`, the parser is in within a short option group,
-	 * therefore it must resume there in the next
-	 * argpar_iter_next() call.
+	 * Current character within the current short option group: if
+	 * it's not `NULL`, the parser is within a short option group,
+	 * therefore it must resume there in the next argpar_iter_next()
+	 * call.
 	 */
-	const char *short_opt_ch;
+	const char *short_opt_group_ch;
 
 	/* Temporary character buffer which only grows */
 	struct {
@@ -338,7 +338,8 @@ enum parse_orig_arg_opt_ret {
 };
 
 static
-enum parse_orig_arg_opt_ret parse_short_opts(const char * const short_opts,
+enum parse_orig_arg_opt_ret parse_short_opt_group(
+		const char * const short_opt_group,
 		const char * const next_orig_arg,
 		const struct argpar_opt_descr * const descrs,
 		struct argpar_iter * const iter,
@@ -350,25 +351,25 @@ enum parse_orig_arg_opt_ret parse_short_opts(const char * const short_opts,
 	const struct argpar_opt_descr *descr;
 	struct argpar_item_opt *opt_item;
 
-	ARGPAR_ASSERT(strlen(short_opts) != 0);
+	ARGPAR_ASSERT(strlen(short_opt_group) != 0);
 
-	if (!iter->short_opt_ch) {
-		iter->short_opt_ch = short_opts;
+	if (!iter->short_opt_group_ch) {
+		iter->short_opt_group_ch = short_opt_group;
 	}
 
 	/* Find corresponding option descriptor */
-	descr = find_descr(descrs, *iter->short_opt_ch, NULL);
+	descr = find_descr(descrs, *iter->short_opt_group_ch, NULL);
 	if (!descr) {
 		try_append_string_printf(error, "Unknown option `-%c`",
-			*iter->short_opt_ch);
+			*iter->short_opt_group_ch);
 		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT;
 		goto error;
 	}
 
 	if (descr->with_arg) {
-		if (iter->short_opt_ch[1]) {
+		if (iter->short_opt_group_ch[1]) {
 			/* `-oarg` form */
-			opt_arg = &iter->short_opt_ch[1];
+			opt_arg = &iter->short_opt_group_ch[1];
 		} else {
 			/* `-o arg` form */
 			opt_arg = next_orig_arg;
@@ -379,11 +380,11 @@ enum parse_orig_arg_opt_ret parse_short_opts(const char * const short_opts,
 		 * We accept `-o ''` (empty option argument), but not
 		 * `-o` alone if an option argument is expected.
 		 */
-		if (!opt_arg || (iter->short_opt_ch[1] &&
+		if (!opt_arg || (iter->short_opt_group_ch[1] &&
 				strlen(opt_arg) == 0)) {
 			try_append_string_printf(error,
 				"Missing required argument for option `-%c`",
-				*iter->short_opt_ch);
+				*iter->short_opt_group_ch);
 			used_next_orig_arg = false;
 			ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG;
 			goto error;
@@ -398,11 +399,11 @@ enum parse_orig_arg_opt_ret parse_short_opts(const char * const short_opts,
 	}
 
 	*item = &opt_item->base;
-	iter->short_opt_ch++;
+	iter->short_opt_group_ch++;
 
-	if (descr->with_arg || !*iter->short_opt_ch) {
+	if (descr->with_arg || !*iter->short_opt_group_ch) {
 		/* Option has an argument: no more options */
-		iter->short_opt_ch = NULL;
+		iter->short_opt_group_ch = NULL;
 
 		if (used_next_orig_arg) {
 			iter->i += 2;
@@ -541,7 +542,7 @@ enum parse_orig_arg_opt_ret parse_orig_arg_opt(const char * const orig_arg,
 			next_orig_arg, descrs, iter, error, item);
 	} else {
 		/* Short option */
-		ret = parse_short_opts(&orig_arg[1],
+		ret = parse_short_opt_group(&orig_arg[1],
 			next_orig_arg, descrs, iter, error, item);
 	}
 
