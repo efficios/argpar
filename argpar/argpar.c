@@ -192,6 +192,12 @@ end:
 	return;
 }
 
+/*
+ * Creates and returns an option parsing item for the descriptor `descr`
+ * and having the argument `arg` (copied; may be `NULL`).
+ *
+ * Returns `NULL` on memory error.
+ */
 static
 struct argpar_item_opt *create_opt_item(
 		const struct argpar_opt_descr * const descr,
@@ -224,6 +230,13 @@ end:
 	return opt_item;
 }
 
+/*
+ * Creates and returns a non-option parsing item for the original
+ * argument `arg` having the original index `orig_index` and the
+ * non-option index `non_opt_index`.
+ *
+ * Returns `NULL` on memory error.
+ */
 static
 struct argpar_item_non_opt *create_non_opt_item(const char * const arg,
 		const unsigned int orig_index,
@@ -340,6 +353,17 @@ void argpar_error_destroy(const struct argpar_error * const error)
 	}
 }
 
+/*
+ * Finds and returns the _first_ descriptor having the short option name
+ * `short_name` or the long option name `long_name` within the option
+ * descriptors `descrs`.
+ *
+ * `short_name` may be `'\0'` to not consider it.
+ *
+ * `long_name` may be `NULL` to not consider it.
+ *
+ * Returns `NULL` if no descriptor is found.
+ */
 static
 const struct argpar_opt_descr *find_descr(
 		const struct argpar_opt_descr * const descrs,
@@ -363,6 +387,7 @@ end:
 	return !descr->short_name && !descr->long_name ? NULL : descr;
 }
 
+/* Return type of parse_short_opt_group() and parse_long_opt() */
 enum parse_orig_arg_opt_ret {
 	PARSE_ORIG_ARG_OPT_RET_OK,
 	PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT = -1,
@@ -371,6 +396,15 @@ enum parse_orig_arg_opt_ret {
 	PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY = -5,
 };
 
+/*
+ * Parses the short option group argument `short_opt_group`, starting
+ * where needed depending on the state of `iter`.
+ *
+ * On success, sets `*item`.
+ *
+ * On error (except for `PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY`), sets
+ * `*error`.
+ */
 static
 enum parse_orig_arg_opt_ret parse_short_opt_group(
 		const char * const short_opt_group,
@@ -463,6 +497,14 @@ end:
 	return ret;
 }
 
+/*
+ * Parses the long option argument `long_opt_arg`.
+ *
+ * On success, sets `*item`.
+ *
+ * On error (except for `PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY`), sets
+ * `*error`.
+ */
 static
 enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		const char * const next_orig_arg,
@@ -576,6 +618,14 @@ end:
 	return ret;
 }
 
+/*
+ * Parses the original argument `orig_arg`.
+ *
+ * On success, sets `*item`.
+ *
+ * On error (except for `PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY`), sets
+ * `*error`.
+ */
 static
 enum parse_orig_arg_opt_ret parse_orig_arg_opt(const char * const orig_arg,
 		const char * const next_orig_arg,
