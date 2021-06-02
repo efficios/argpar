@@ -41,9 +41,11 @@ struct argpar_iter {
 	 * Data provided by the user to argpar_iter_create(); immutable
 	 * afterwards.
 	 */
-	unsigned int argc;
-	const char * const *argv;
-	const struct argpar_opt_descr *descrs;
+	struct {
+		unsigned int argc;
+		const char * const *argv;
+		const struct argpar_opt_descr *descrs;
+	} user;
 
 	/*
 	 * Index of the argument to process in the next
@@ -610,9 +612,9 @@ struct argpar_iter *argpar_iter_create(const unsigned int argc,
 		goto end;
 	}
 
-	iter->argc = argc;
-	iter->argv = argv;
-	iter->descrs = descrs;
+	iter->user.argc = argc;
+	iter->user.argv = argv;
+	iter->user.descrs = descrs;
 	iter->tmp_buf.size = 128;
 	iter->tmp_buf.data = ARGPAR_CALLOC(char, iter->tmp_buf.size);
 	if (!iter->tmp_buf.data) {
@@ -646,20 +648,21 @@ enum argpar_iter_next_status argpar_iter_next(
 	const char *next_orig_arg;
 	struct argpar_error ** const nc_error = (struct argpar_error **) error;
 
-	ARGPAR_ASSERT(iter->i <= iter->argc);
+	ARGPAR_ASSERT(iter->i <= iter->user.argc);
 
 	if (error) {
 		*nc_error = NULL;
 	}
 
-	if (iter->i == iter->argc) {
+	if (iter->i == iter->user.argc) {
 		status = ARGPAR_ITER_NEXT_STATUS_END;
 		goto end;
 	}
 
-	orig_arg = iter->argv[iter->i];
+	orig_arg = iter->user.argv[iter->i];
 	next_orig_arg =
-		iter->i < (iter->argc - 1) ? iter->argv[iter->i + 1] : NULL;
+		iter->i < (iter->user.argc - 1) ?
+			iter->user.argv[iter->i + 1] : NULL;
 
 	if (strcmp(orig_arg, "-") == 0 || strcmp(orig_arg, "--") == 0 ||
 			orig_arg[0] != '-') {
@@ -682,7 +685,7 @@ enum argpar_iter_next_status argpar_iter_next(
 
 	/* Option argument */
 	parse_orig_arg_opt_ret = parse_orig_arg_opt(orig_arg,
-		next_orig_arg, iter->descrs, iter, nc_error,
+		next_orig_arg, iter->user.descrs, iter, nc_error,
 		(struct argpar_item **) item);
 	switch (parse_orig_arg_opt_ret) {
 	case PARSE_ORIG_ARG_OPT_RET_OK:
