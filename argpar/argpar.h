@@ -593,6 +593,8 @@ void argpar_iter_destroy(struct argpar_iter *iter);
 /*!
 @brief
     Return type of argpar_iter_next().
+
+Error status enumerators have a negative value.
 */
 enum argpar_iter_next_status {
 	/// Success
@@ -602,16 +604,16 @@ enum argpar_iter_next_status {
 	ARGPAR_ITER_NEXT_STATUS_END,
 
 	/// Unknown option error
-	ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+	ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT = -1,
 
 	/// Missing option argument error
-	ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
+	ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG = -2,
 
 	/// Unexpected option argument error
-	ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG,
+	ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG = -3,
 
 	/// Memory error
-	ARGPAR_ITER_NEXT_STATUS_ERROR_MEMORY,
+	ARGPAR_ITER_NEXT_STATUS_ERROR_MEMORY = -12,
 };
 
 /*!
