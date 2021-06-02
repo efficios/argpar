@@ -107,7 +107,7 @@ void test_succeed(const char * const cmdline,
 {
 	struct argpar_iter *iter = NULL;
 	const struct argpar_item *item = NULL;
-	char *error = NULL;
+	const struct argpar_error *error = NULL;
 	GString * const res_str = g_string_new(NULL);
 	gchar ** const argv = g_strsplit(cmdline, " ", 0);
 	unsigned int i, actual_ingested_orig_args;
@@ -125,33 +125,19 @@ void test_succeed(const char * const cmdline,
 		status = argpar_iter_next(iter, &item, &error);
 
 		ok(status == ARGPAR_ITER_NEXT_STATUS_OK ||
-			status == ARGPAR_ITER_NEXT_STATUS_END ||
-			status == ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			status == ARGPAR_ITER_NEXT_STATUS_END,
 			"argpar_iter_next() returns the expected status "
 			"(%d) for command line `%s` (call %u)",
 			status, cmdline, i + 1);
+		ok(!error,
+			"argpar_iter_next() doesn't set an error for "
+			"command line `%s` (call %u)",
+			cmdline, i + 1);
 
-		if (status == ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT) {
-			ok(error,
-				"argpar_iter_next() sets an error for "
-				"status `ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT` "
-				"and command line `%s` (call %u)",
-				cmdline, i + 1);
-		} else {
-			ok(!error,
-				"argpar_iter_next() doesn't set an error "
-				"for other status than "
-				"`ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT` "
-				"and command line `%s` (call %u)",
-				cmdline, i + 1);
-		}
-
-		if (status == ARGPAR_ITER_NEXT_STATUS_END ||
-				status == ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT) {
+		if (status == ARGPAR_ITER_NEXT_STATUS_END) {
 			ok(!item,
 				"argpar_iter_next() doesn't set an item "
 				"for status `ARGPAR_ITER_NEXT_STATUS_END` "
-				"or `ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT` "
 				"and command line `%s` (call %u)",
 				cmdline, i + 1);
 			break;
@@ -182,9 +168,9 @@ void test_succeed(const char * const cmdline,
 
 	argpar_item_destroy(item);
 	argpar_iter_destroy(iter);
+	assert(!error);
 	g_string_free(res_str, TRUE);
 	g_strfreev(argv);
-	free(error);
 }
 
 static
@@ -374,84 +360,6 @@ void succeed_tests(void)
 			descrs, 7);
 	}
 
-	/* Unknown short option (space form) */
-	{
-		const struct argpar_opt_descr descrs[] = {
-			{ 0, 'd', NULL, true },
-			ARGPAR_OPT_DESCR_SENTINEL
-		};
-
-		test_succeed(
-			"-d salut -e -d meow",
-			"-d salut",
-			descrs, 2);
-	}
-
-	/* Unknown short option (glued form) */
-	{
-		const struct argpar_opt_descr descrs[] = {
-			{ 0, 'd', NULL, true },
-			ARGPAR_OPT_DESCR_SENTINEL
-		};
-
-		test_succeed(
-			"-dsalut -e -d meow",
-			"-d salut",
-			descrs, 1);
-	}
-
-	/* Unknown long option (space form) */
-	{
-		const struct argpar_opt_descr descrs[] = {
-			{ 0, '\0', "sink", true },
-			ARGPAR_OPT_DESCR_SENTINEL
-		};
-
-		test_succeed(
-			"--sink party --food --sink impulse",
-			"--sink=party",
-			descrs, 2);
-	}
-
-	/* Unknown long option (equal form) */
-	{
-		const struct argpar_opt_descr descrs[] = {
-			{ 0, '\0', "sink", true },
-			ARGPAR_OPT_DESCR_SENTINEL
-		};
-
-		test_succeed(
-			"--sink=party --food --sink=impulse",
-			"--sink=party",
-			descrs, 1);
-	}
-
-	/* Unknown option before non-option argument */
-	{
-		const struct argpar_opt_descr descrs[] = {
-			{ 0, '\0', "thumb", true },
-			ARGPAR_OPT_DESCR_SENTINEL
-		};
-
-		test_succeed(
-			"--thumb=party --food bateau --thumb waves",
-			"--thumb=party",
-			descrs, 1);
-	}
-
-	/* Unknown option after non-option argument */
-	{
-		const struct argpar_opt_descr descrs[] = {
-			{ 0, '\0', "thumb", true },
-			ARGPAR_OPT_DESCR_SENTINEL
-		};
-
-		test_succeed(
-			"--thumb=party wound --food --thumb waves",
-			"--thumb=party wound<1,0>",
-			descrs, 2);
-	}
-
 	/* Valid `---opt` */
 	{
 		const struct argpar_opt_descr descrs[] = {
@@ -602,22 +510,36 @@ void succeed_tests(void)
 /*
  * Parses `cmdline` with the argpar API using the option descriptors
  * `descrs`, and ensures that argpar_iter_next() fails with status
- * `expected_status` and that it sets an error which is equal to
- * `expected_error`.
+ * `expected_status` and that it sets an error having:
+ *
+ * * The original argument index `expected_orig_index`.
+ *
+ * * If applicable:
+ *
+ *   * The unknown option name `expected_unknown_opt_name`.
+ *
+ *   * The option descriptor at index `expected_opt_descr_index` of
+ *     `descrs`.
+ *
+ *   * The option type `expected_is_short`.
  *
  * This function splits `cmdline` on spaces to create an original
  * argument array.
  */
 static
-void test_fail(const char * const cmdline, const char * const expected_error,
+void test_fail(const char * const cmdline,
 		const enum argpar_iter_next_status expected_status,
+		const unsigned int expected_orig_index,
+		const char * const expected_unknown_opt_name,
+		const unsigned int expected_opt_descr_index,
+		const bool expected_is_short,
 		const struct argpar_opt_descr * const descrs)
 {
 	struct argpar_iter *iter = NULL;
 	const struct argpar_item *item = NULL;
 	gchar ** const argv = g_strsplit(cmdline, " ", 0);
 	unsigned int i;
-	char *error = NULL;
+	const struct argpar_error *error = NULL;
 
 	iter = argpar_iter_create(g_strv_length(argv),
 		(const char * const *) argv, descrs);
@@ -647,6 +569,35 @@ void test_fail(const char * const cmdline, const char * const expected_error,
 				" `ARGPAR_ITER_NEXT_STATUS_OK` "
 				"and command line `%s` (call %u)",
 				cmdline, i + 1);
+			ok(argpar_error_orig_index(error) ==
+				expected_orig_index,
+				"argpar_iter_next() sets an error with "
+				"the expected original argument index "
+				"for command line `%s` (call %u)",
+				cmdline, i + 1);
+
+			if (status == ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT) {
+				ok(strcmp(argpar_error_unknown_opt_name(error),
+					expected_unknown_opt_name) == 0,
+					"argpar_iter_next() sets an error with "
+					"the expected unknown option name "
+					"for command line `%s` (call %u)",
+					cmdline, i + 1);
+			} else {
+				bool is_short;
+
+				ok(argpar_error_opt_descr(error, &is_short) ==
+					&descrs[expected_opt_descr_index],
+					"argpar_iter_next() sets an error with "
+					"the expected option descriptor "
+					"for command line `%s` (call %u)",
+					cmdline, i + 1);
+				ok(is_short == expected_is_short,
+					"argpar_iter_next() sets an error with "
+					"the expected option type "
+					"for command line `%s` (call %u)",
+					cmdline, i + 1);
+			}
 			break;
 		}
 
@@ -662,6 +613,7 @@ void test_fail(const char * const cmdline, const char * const expected_error,
 			cmdline, i + 1);
 	}
 
+	/*
 	ok(strcmp(expected_error, error) == 0,
 		"argpar_iter_next() sets the expected error string "
 		"for command line `%s`", cmdline);
@@ -670,31 +622,75 @@ void test_fail(const char * const cmdline, const char * const expected_error,
 		diag("Expected: `%s`", expected_error);
 		diag("Got:      `%s`", error);
 	}
+	*/
 
 	argpar_item_destroy(item);
 	argpar_iter_destroy(iter);
-	free(error);
+	argpar_error_destroy(error);
 	g_strfreev(argv);
 }
 
 static
 void fail_tests(void)
 {
-	/* Unknown long option */
+
+	/* Unknown short option (space form) */
 	{
 		const struct argpar_opt_descr descrs[] = {
-			{ 0, '\0', "thumb", true },
+			{ 0, 'd', NULL, true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
 		test_fail(
-			"--thumb=party --meow",
-			"While parsing argument #2 (`--meow`): Unknown option `--meow`",
+			"-d salut -e -d meow",
 			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			2, "-e", 0, false,
 			descrs);
 	}
 
-	/* Unknown short option */
+	/* Unknown short option (glued form) */
+	{
+		const struct argpar_opt_descr descrs[] = {
+			{ 0, 'd', 0, true },
+			ARGPAR_OPT_DESCR_SENTINEL
+		};
+
+		test_fail(
+			"-dsalut -e -d meow",
+			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			1, "-e", 0, false,
+			descrs);
+	}
+
+	/* Unknown long option (space form) */
+	{
+		const struct argpar_opt_descr descrs[] = {
+			{ 0, '\0', "sink", true },
+			ARGPAR_OPT_DESCR_SENTINEL
+		};
+
+		test_fail(
+			"--sink party --food --sink impulse",
+			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			2, "--food", 0, false,
+			descrs);
+	}
+
+	/* Unknown long option (equal form) */
+	{
+		const struct argpar_opt_descr descrs[] = {
+			{ 0, '\0', "sink", true },
+			ARGPAR_OPT_DESCR_SENTINEL
+		};
+
+		test_fail(
+			"--sink=party --food --sink=impulse",
+			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			1, "--food", 0, false,
+			descrs);
+	}
+
+	/* Unknown option before non-option argument */
 	{
 		const struct argpar_opt_descr descrs[] = {
 			{ 0, '\0', "thumb", true },
@@ -702,9 +698,23 @@ void fail_tests(void)
 		};
 
 		test_fail(
-			"--thumb=party -x",
-			"While parsing argument #2 (`-x`): Unknown option `-x`",
+			"--thumb=party --food=18 bateau --thumb waves",
 			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			1, "--food", 0, false,
+			descrs);
+	}
+
+	/* Unknown option after non-option argument */
+	{
+		const struct argpar_opt_descr descrs[] = {
+			{ 0, '\0', "thumb", true },
+			ARGPAR_OPT_DESCR_SENTINEL
+		};
+
+		test_fail(
+			"--thumb=party wound --food --thumb waves",
+			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			2, "--food", 0, false,
 			descrs);
 	}
 
@@ -716,9 +726,9 @@ void fail_tests(void)
 		};
 
 		test_fail(
-			"--thumb",
-			"While parsing argument #1 (`--thumb`): Missing required argument for option `--thumb`",
+			"allo --thumb",
 			ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
+			1, NULL, 0, false,
 			descrs);
 	}
 
@@ -730,9 +740,9 @@ void fail_tests(void)
 		};
 
 		test_fail(
-			"-k",
-			"While parsing argument #1 (`-k`): Missing required argument for option `-k`",
+			"zoom heille -k",
 			ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
+			2, NULL, 0, true,
 			descrs);
 	}
 
@@ -747,8 +757,8 @@ void fail_tests(void)
 
 		test_fail(
 			"-abc",
-			"While parsing argument #1 (`-abc`): Missing required argument for option `-c`",
 			ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
+			0, NULL, 2, true,
 			descrs);
 	}
 
@@ -760,16 +770,16 @@ void fail_tests(void)
 		};
 
 		test_fail(
-			"--chevre=fromage",
-			"While parsing argument #1 (`--chevre=fromage`): Unexpected argument for option `--chevre`",
+			"ambulance --chevre=fromage tar -cjv",
 			ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG,
+			1, NULL, 0, false,
 			descrs);
 	}
 }
 
 int main(void)
 {
-	plan_tests(296);
+	plan_tests(309);
 	succeed_tests();
 	fail_tests();
 	return exit_status();

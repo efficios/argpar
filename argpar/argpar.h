@@ -211,7 +211,7 @@ const char *argpar_item_opt_arg(const struct argpar_item *item);
 /*!
 @brief
     Returns the complete original argument, pointing to one of the
-    entries of the original arguments (\p argv as passed to
+    entries of the original arguments (in \p argv, as passed to
     argpar_iter_create()), of the non-option parsing item \p item.
 
 @param[in] item
@@ -233,9 +233,9 @@ const char *argpar_item_non_opt_arg(const struct argpar_item *item);
 
 /*!
 @brief
-    Returns the index, within \em all the original arguments (\p argv
-    as passed to argpar_iter_create()), of the non-option parsing item
-    \p item.
+    Returns the index, within \em all the original arguments (in
+    \p argv, as passed to argpar_iter_create()), of the non-option
+    parsing item \p item.
 
 For example, with the following command line (all options have no
 argument):
@@ -334,6 +334,123 @@ void argpar_item_destroy(const struct argpar_item *item);
 /// @}
 
 /*!
+@name Error API
+@{
+*/
+
+/*!
+@struct argpar_error
+
+@brief
+    Opaque parsing error type
+*/
+struct argpar_error;
+
+/*!
+@brief
+    Returns the index of the original argument (in \p argv, as passed to
+    argpar_iter_create()) for which the parsing error described by
+    \p error occurred.
+
+@param[in] error
+    Parsing error of which to get the original argument index.
+
+@returns
+    Original argument index of \p error.
+
+@pre
+    \p error is not \c NULL.
+*/
+/// @cond hidden_macro
+ARGPAR_HIDDEN
+/// @endcond
+unsigned int argpar_error_orig_index(const struct argpar_error *error);
+
+/*!
+@brief
+    Returns the name of the unknown option for which the parsing error
+    described by \p error occurred.
+
+The returned name includes any <code>-</code> or <code>\--</code>
+prefix.
+
+With the long option with argument form, for example
+<code>\--mireille=deyglun</code>, this function only returns the name
+part (<code>\--mireille</code> in the last example).
+
+You may only call this function if the call to argpar_iter_next() which
+set \p error returned #ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT.
+
+@param[in] error
+    Parsing error of which to get the name of the unknown option.
+
+@returns
+    Name of the unknown option of \p error.
+
+@pre
+    \p error is not \c NULL.
+@pre
+    The call to argpar_iter_next() which set \p error returned
+    #ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT.
+*/
+/// @cond hidden_macro
+ARGPAR_HIDDEN
+/// @endcond
+const char *argpar_error_unknown_opt_name(const struct argpar_error *error);
+
+/*!
+@brief
+    Returns the descriptor of the option for which the parsing error
+    described by \p error occurred.
+
+You may only call this function if the call to argpar_iter_next() which
+set \p error returned #ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG or
+#ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPG_ARG.
+
+@param[in] error
+    Parsing error of which to get the option descriptor.
+@param[out] is_short
+    @parblock
+    If not \c NULL, this function sets \p *is_short to:
+
+    - \c true if the option for which \p error occurred is a short
+      option.
+
+    - \c false if the option for which \p error occurred is a long
+      option.
+    @endparblock
+
+@returns
+    Descriptor of the option of \p error.
+
+@pre
+    \p error is not \c NULL.
+@pre
+    The call to argpar_iter_next() which set \p error returned
+    #ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG or
+    #ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPG_ARG.
+*/
+/// @cond hidden_macro
+ARGPAR_HIDDEN
+/// @endcond
+const struct argpar_opt_descr *argpar_error_opt_descr(
+		const struct argpar_error *error, bool *is_short);
+
+/*!
+@brief
+    Destroys the parsing error \p error.
+
+@param[in] error
+    Parsing error to destroy (may be \c NULL).
+*/
+/// @cond hidden_macro
+ARGPAR_HIDDEN
+/// @endcond
+void argpar_error_destroy(const struct argpar_error *error);
+
+/// @}
+
+/*!
 @name Iterator API
 @{
 */
@@ -412,10 +529,18 @@ and <code>\&argv[1]</code> as \p argv from what <code>main()</code>
 receives, or ignore the parsing item of the first call to
 argpar_iter_next().
 
-\p *argv and \p *descrs must \em not change for the lifetime of the
-returned iterator (until you call argpar_iter_destroy()) and for the
-lifetime of any parsing item (until you call argpar_item_destroy())
-which argpar_iter_next() creates from the returned iterator.
+\p *argv and \p *descrs must \em not change for all of:
+
+- The lifetime of the returned iterator (until you call
+  argpar_iter_destroy()).
+
+- The lifetime of any parsing item (until you call
+  argpar_item_destroy()) which argpar_iter_next() creates from the
+  returned iterator.
+
+- The lifetime of any parsing error (until you call
+  argpar_error_destroy()) which argpar_iter_next() creates from the
+  returned iterator.
 
 @param[in] argc
     Number of original arguments to parse in \p argv.
@@ -512,9 +637,9 @@ If there are no more original arguments to parse, this function returns
     #ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG, or
     #ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPG_ARG, if this parameter
     is not \c NULL,
-    \p *error is a string which explains the parsing error in English.
+    \p *error contains details about the error.
 
-    Free \p *error with <code>free()</code>.
+    Destroy \p *error with argpar_error_destroy().
     @endparblock
 
 @returns
@@ -530,7 +655,7 @@ ARGPAR_HIDDEN
 /// @endcond
 enum argpar_iter_next_status argpar_iter_next(
 		struct argpar_iter *iter, const struct argpar_item **item,
-		char **error);
+		const struct argpar_error **error);
 
 /*
  * Returns the number of ingested elements from `argv`, as passed to
@@ -541,7 +666,7 @@ enum argpar_iter_next_status argpar_iter_next(
 /*!
 @brief
     Returns the number of ingested original arguments (in
-    \p argv as passed to argpar_iter_create() to create \p iter) that
+    \p argv, as passed to argpar_iter_create() to create \p iter) that
     the parser ingested to produce the \em previous parsing items.
 
 @param[in] iter

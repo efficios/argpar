@@ -105,83 +105,20 @@ struct argpar_item_non_opt {
 	unsigned int non_opt_index;
 };
 
-static __attribute__((format(ARGPAR_PRINTF_FORMAT, 1, 0)))
-char *argpar_vasprintf(const char * const fmt, va_list args)
-{
-	int len1, len2;
-	char *str;
-	va_list args2;
+/* Parsing error */
+struct argpar_error {
+	/* Original argument index */
+	unsigned int orig_index;
 
-	va_copy(args2, args);
-	len1 = vsnprintf(NULL, 0, fmt, args);
-	if (len1 < 0) {
-		str = NULL;
-		goto end;
-	}
+	/* Name of unknown option; owned by this */
+	char *unknown_opt_name;
 
-	str = malloc(len1 + 1);
-	if (!str) {
-		goto end;
-	}
+	/* Option descriptor */
+	const struct argpar_opt_descr *opt_descr;
 
-	len2 = vsnprintf(str, len1 + 1, fmt, args2);
-	ARGPAR_ASSERT(len1 == len2);
-
-end:
-	va_end(args2);
-	return str;
-}
-
-
-static __attribute__((format(ARGPAR_PRINTF_FORMAT, 1, 2)))
-char *argpar_asprintf(const char * const fmt, ...)
-{
-	va_list args;
-	char *str;
-
-	va_start(args, fmt);
-	str = argpar_vasprintf(fmt, args);
-	va_end(args);
-	return str;
-}
-
-static __attribute__((format(ARGPAR_PRINTF_FORMAT, 2, 3)))
-bool try_append_string_printf(char ** const str, const char *fmt, ...)
-{
-	char *new_str = NULL;
-	char *addendum = NULL;
-	bool success;
-	va_list args;
-
-	if (!str) {
-		success = true;
-		goto end;
-	}
-
-	ARGPAR_ASSERT(str);
-	va_start(args, fmt);
-	addendum = argpar_vasprintf(fmt, args);
-	va_end(args);
-
-	if (!addendum) {
-		success = false;
-		goto end;
-	}
-
-	new_str = argpar_asprintf("%s%s", *str ? *str : "", addendum);
-	if (!new_str) {
-		success = false;
-		goto end;
-	}
-
-	free(*str);
-	*str = new_str;
-	success = true;
-
-end:
-	free(addendum);
-	return success;
-}
+	/* `true` if a short option caused the error */
+	bool is_short;
+};
 
 ARGPAR_HIDDEN
 enum argpar_item_type argpar_item_type(const struct argpar_item * const item)
@@ -306,6 +243,101 @@ end:
 	return non_opt_item;
 }
 
+/*
+ * If `error` is not `NULL`, sets the error `error` to a new parsing
+ * error object, setting its `unknown_opt_name`, `opt_descr`, and
+ * `is_short` members from the parameters.
+ *
+ * `unknown_opt_name` is the unknown option name without any `-` or `--`
+ * prefix: `is_short` controls which type of unknown option it is.
+ *
+ * Returns 0 on success (including if `error` is `NULL`) or -1 on memory
+ * error.
+ */
+static
+int set_error(struct argpar_error ** const error,
+		const char * const unknown_opt_name,
+		const struct argpar_opt_descr * const opt_descr,
+		const bool is_short)
+{
+	int ret = 0;
+
+	if (!error) {
+		goto end;
+	}
+
+	*error = ARGPAR_ZALLOC(struct argpar_error);
+	if (!*error) {
+		goto error;
+	}
+
+	if (unknown_opt_name) {
+		(*error)->unknown_opt_name = ARGPAR_CALLOC(char,
+			strlen(unknown_opt_name) + 1 + is_short ? 1 : 2);
+		if (!(*error)->unknown_opt_name) {
+			goto error;
+		}
+
+		if (is_short) {
+			strcpy((*error)->unknown_opt_name, "-");
+		} else {
+			strcpy((*error)->unknown_opt_name, "--");
+		}
+
+		strcat((*error)->unknown_opt_name, unknown_opt_name);
+	}
+
+	(*error)->opt_descr = opt_descr;
+	(*error)->is_short = is_short;
+	goto end;
+
+error:
+	argpar_error_destroy(*error);
+	ret = -1;
+
+end:
+	return ret;
+}
+
+ARGPAR_HIDDEN
+unsigned int argpar_error_orig_index(const struct argpar_error * const error)
+{
+	ARGPAR_ASSERT(error);
+	return error->orig_index;
+}
+
+ARGPAR_HIDDEN
+const char *argpar_error_unknown_opt_name(
+		const struct argpar_error * const error)
+{
+	ARGPAR_ASSERT(error);
+	ARGPAR_ASSERT(error->unknown_opt_name);
+	return error->unknown_opt_name;
+}
+
+ARGPAR_HIDDEN
+const struct argpar_opt_descr *argpar_error_opt_descr(
+		const struct argpar_error * const error, bool * const is_short)
+{
+	ARGPAR_ASSERT(error);
+	ARGPAR_ASSERT(error->opt_descr);
+
+	if (is_short) {
+		*is_short = error->is_short;
+	}
+
+	return error->opt_descr;
+}
+
+ARGPAR_HIDDEN
+void argpar_error_destroy(const struct argpar_error * const error)
+{
+	if (error) {
+		free(error->unknown_opt_name);
+		free((void *) error);
+	}
+}
+
 static
 const struct argpar_opt_descr *find_descr(
 		const struct argpar_opt_descr * const descrs,
@@ -343,7 +375,8 @@ enum parse_orig_arg_opt_ret parse_short_opt_group(
 		const char * const next_orig_arg,
 		const struct argpar_opt_descr * const descrs,
 		struct argpar_iter * const iter,
-		char ** const error, struct argpar_item ** const item)
+		struct argpar_error ** const error,
+		struct argpar_item ** const item)
 {
 	enum parse_orig_arg_opt_ret ret = PARSE_ORIG_ARG_OPT_RET_OK;
 	bool used_next_orig_arg = false;
@@ -360,9 +393,15 @@ enum parse_orig_arg_opt_ret parse_short_opt_group(
 	/* Find corresponding option descriptor */
 	descr = find_descr(descrs, *iter->short_opt_group_ch, NULL);
 	if (!descr) {
-		try_append_string_printf(error, "Unknown option `-%c`",
-			*iter->short_opt_group_ch);
+		const char unknown_opt_name[] =
+			{*iter->short_opt_group_ch, '\0'};
+
 		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT;
+
+		if (set_error(error, unknown_opt_name, NULL, true)) {
+			ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY;
+		}
+
 		goto error;
 	}
 
@@ -382,11 +421,12 @@ enum parse_orig_arg_opt_ret parse_short_opt_group(
 		 */
 		if (!opt_arg || (iter->short_opt_group_ch[1] &&
 				strlen(opt_arg) == 0)) {
-			try_append_string_printf(error,
-				"Missing required argument for option `-%c`",
-				*iter->short_opt_group_ch);
-			used_next_orig_arg = false;
 			ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG;
+
+			if (set_error(error, NULL, descr, true)) {
+				ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY;
+			}
+
 			goto error;
 		}
 	}
@@ -426,7 +466,8 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		const char * const next_orig_arg,
 		const struct argpar_opt_descr * const descrs,
 		struct argpar_iter * const iter,
-		char ** const error, struct argpar_item ** const item)
+		struct argpar_error ** const error,
+		struct argpar_item ** const item)
 {
 	enum parse_orig_arg_opt_ret ret = PARSE_ORIG_ARG_OPT_RET_OK;
 	const struct argpar_opt_descr *descr;
@@ -468,9 +509,12 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 	/* Find corresponding option descriptor */
 	descr = find_descr(descrs, '\0', long_opt_name);
 	if (!descr) {
-		try_append_string_printf(error, "Unknown option `--%s`",
-			long_opt_name);
 		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT;
+
+		if (set_error(error, long_opt_name, NULL, false)) {
+			ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY;
+		}
+
 		goto error;
 	}
 
@@ -482,10 +526,12 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		} else {
 			/* `--long-opt arg` style */
 			if (!next_orig_arg) {
-				try_append_string_printf(error,
-					"Missing required argument for option `--%s`",
-					long_opt_name);
 				ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG;
+
+				if (set_error(error, NULL, descr, false)) {
+					ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY;
+				}
+
 				goto error;
 			}
 
@@ -497,9 +543,12 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		 * Unexpected `--opt=arg` style for a long option which
 		 * doesn't accept an argument.
 		 */
-		try_append_string_printf(error,
-			"Unexpected argument for option `--%s`", long_opt_name);
 		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_UNEXPECTED_OPT_ARG;
+
+		if (set_error(error, NULL, descr, false)) {
+			ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY;
+		}
+
 		goto error;
 	}
 
@@ -529,7 +578,8 @@ static
 enum parse_orig_arg_opt_ret parse_orig_arg_opt(const char * const orig_arg,
 		const char * const next_orig_arg,
 		const struct argpar_opt_descr * const descrs,
-		struct argpar_iter * const iter, char ** const error,
+		struct argpar_iter * const iter,
+		struct argpar_error ** const error,
 		struct argpar_item ** const item)
 {
 	enum parse_orig_arg_opt_ret ret = PARSE_ORIG_ARG_OPT_RET_OK;
@@ -547,34 +597,6 @@ enum parse_orig_arg_opt_ret parse_orig_arg_opt(const char * const orig_arg,
 	}
 
 	return ret;
-}
-
-static
-bool try_prepend_while_parsing_arg_to_error(char ** const error,
-		const unsigned int i, const char * const arg)
-{
-	char *new_error;
-	bool success;
-
-	if (!error) {
-		success = true;
-		goto end;
-	}
-
-	ARGPAR_ASSERT(*error);
-	new_error = argpar_asprintf("While parsing argument #%u (`%s`): %s",
-		i + 1, arg, *error);
-	if (!new_error) {
-		success = false;
-		goto end;
-	}
-
-	free(*error);
-	*error = new_error;
-	success = true;
-
-end:
-	return success;
 }
 
 ARGPAR_HIDDEN
@@ -615,17 +637,19 @@ void argpar_iter_destroy(struct argpar_iter * const iter)
 ARGPAR_HIDDEN
 enum argpar_iter_next_status argpar_iter_next(
 		struct argpar_iter * const iter,
-		const struct argpar_item ** const item, char ** const error)
+		const struct argpar_item ** const item,
+		const struct argpar_error ** const error)
 {
 	enum argpar_iter_next_status status;
 	enum parse_orig_arg_opt_ret parse_orig_arg_opt_ret;
 	const char *orig_arg;
 	const char *next_orig_arg;
+	struct argpar_error ** const nc_error = (struct argpar_error **) error;
 
 	ARGPAR_ASSERT(iter->i <= iter->argc);
 
 	if (error) {
-		*error = NULL;
+		*nc_error = NULL;
 	}
 
 	if (iter->i == iter->argc) {
@@ -658,7 +682,7 @@ enum argpar_iter_next_status argpar_iter_next(
 
 	/* Option argument */
 	parse_orig_arg_opt_ret = parse_orig_arg_opt(orig_arg,
-		next_orig_arg, iter->descrs, iter, error,
+		next_orig_arg, iter->descrs, iter, nc_error,
 		(struct argpar_item **) item);
 	switch (parse_orig_arg_opt_ret) {
 	case PARSE_ORIG_ARG_OPT_RET_OK:
@@ -667,8 +691,10 @@ enum argpar_iter_next_status argpar_iter_next(
 	case PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT:
 	case PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG:
 	case PARSE_ORIG_ARG_OPT_RET_ERROR_UNEXPECTED_OPT_ARG:
-		try_prepend_while_parsing_arg_to_error(error, iter->i,
-			orig_arg);
+		if (error) {
+			ARGPAR_ASSERT(*error);
+			(*nc_error)->orig_index = iter->i;
+		}
 
 		switch (parse_orig_arg_opt_ret) {
 		case PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT:
