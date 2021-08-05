@@ -288,7 +288,7 @@ int set_error(struct argpar_error ** const error,
 
 	if (unknown_opt_name) {
 		(*error)->unknown_opt_name = ARGPAR_CALLOC(char,
-			strlen(unknown_opt_name) + 1 + is_short ? 1 : 2);
+			strlen(unknown_opt_name) + 1 + (is_short ? 1 : 2));
 		if (!(*error)->unknown_opt_name) {
 			goto error;
 		}
