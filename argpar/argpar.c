@@ -5,7 +5,6 @@
  * Copyright (c) 2020-2021 Simon Marchi <simon.marchi@efficios.com>
  */
 
-#include <assert.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -22,7 +21,16 @@
 
 #define ARGPAR_ZALLOC(_type) ARGPAR_CALLOC(_type, 1)
 
-#define ARGPAR_ASSERT(_cond) assert(_cond)
+#ifdef NDEBUG
+/*
+ * Force usage of the assertion condition to prevent unused variable warnings
+ * when `assert()` are disabled by the `NDEBUG` definition.
+ */
+# define ARGPAR_ASSERT(_cond) ((void) sizeof((void) (_cond), 0))
+#else
+# include <assert.h>
+# define ARGPAR_ASSERT(_cond) assert(_cond)
+#endif
 
 /*
  * An argpar iterator.
