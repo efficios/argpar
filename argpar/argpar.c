@@ -24,12 +24,6 @@
 
 #define ARGPAR_ASSERT(_cond) assert(_cond)
 
-#ifdef __MINGW_PRINTF_FORMAT
-# define ARGPAR_PRINTF_FORMAT __MINGW_PRINTF_FORMAT
-#else
-# define ARGPAR_PRINTF_FORMAT printf
-#endif
-
 /*
  * An argpar iterator.
  *
