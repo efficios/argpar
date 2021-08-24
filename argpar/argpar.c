@@ -103,6 +103,9 @@ struct argpar_item_non_opt {
 
 /* Parsing error */
 struct argpar_error {
+	/* Error type */
+	enum argpar_error_type type;
+
 	/* Original argument index */
 	unsigned int orig_index;
 
@@ -265,6 +268,7 @@ end:
  */
 static
 int set_error(struct argpar_error ** const error,
+		enum argpar_error_type type,
 		const char * const unknown_opt_name,
 		const struct argpar_opt_descr * const opt_descr,
 		const bool is_short)
@@ -279,6 +283,8 @@ int set_error(struct argpar_error ** const error,
 	if (!*error) {
 		goto error;
 	}
+
+	(*error)->type = type;
 
 	if (unknown_opt_name) {
 		(*error)->unknown_opt_name = ARGPAR_CALLOC(char,
@@ -309,6 +315,14 @@ end:
 }
 
 ARGPAR_HIDDEN
+enum argpar_error_type argpar_error_type(
+		const struct argpar_error * const error)
+{
+	ARGPAR_ASSERT(error);
+	return error->type;
+}
+
+ARGPAR_HIDDEN
 unsigned int argpar_error_orig_index(const struct argpar_error * const error)
 {
 	ARGPAR_ASSERT(error);
@@ -320,6 +334,7 @@ const char *argpar_error_unknown_opt_name(
 		const struct argpar_error * const error)
 {
 	ARGPAR_ASSERT(error);
+	ARGPAR_ASSERT(error->type == ARGPAR_ERROR_TYPE_UNKNOWN_OPT);
 	ARGPAR_ASSERT(error->unknown_opt_name);
 	return error->unknown_opt_name;
 }
@@ -329,6 +344,8 @@ const struct argpar_opt_descr *argpar_error_opt_descr(
 		const struct argpar_error * const error, bool * const is_short)
 {
 	ARGPAR_ASSERT(error);
+	ARGPAR_ASSERT(error->type == ARGPAR_ERROR_TYPE_MISSING_OPT_ARG ||
+		error->type == ARGPAR_ERROR_TYPE_UNEXPECTED_OPT_ARG);
 	ARGPAR_ASSERT(error->opt_descr);
 
 	if (is_short) {
@@ -384,10 +401,8 @@ end:
 /* Return type of parse_short_opt_group() and parse_long_opt() */
 enum parse_orig_arg_opt_ret {
 	PARSE_ORIG_ARG_OPT_RET_OK,
-	PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT = -1,
-	PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG = -2,
-	PARSE_ORIG_ARG_OPT_RET_ERROR_UNEXPECTED_OPT_ARG = -4,
-	PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY = -5,
+	PARSE_ORIG_ARG_OPT_RET_ERROR = -1,
+	PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY = -2,
 };
 
 /*
@@ -426,9 +441,10 @@ enum parse_orig_arg_opt_ret parse_short_opt_group(
 		const char unknown_opt_name[] =
 			{*iter->short_opt_group_ch, '\0'};
 
-		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT;
+		ret = PARSE_ORIG_ARG_OPT_RET_ERROR;
 
-		if (set_error(error, unknown_opt_name, NULL, true)) {
+		if (set_error(error, ARGPAR_ERROR_TYPE_UNKNOWN_OPT,
+				unknown_opt_name, NULL, true)) {
 			ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY;
 		}
 
@@ -451,9 +467,10 @@ enum parse_orig_arg_opt_ret parse_short_opt_group(
 		 */
 		if (!opt_arg || (iter->short_opt_group_ch[1] &&
 				strlen(opt_arg) == 0)) {
-			ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG;
+			ret = PARSE_ORIG_ARG_OPT_RET_ERROR;
 
-			if (set_error(error, NULL, descr, true)) {
+			if (set_error(error, ARGPAR_ERROR_TYPE_MISSING_OPT_ARG,
+					NULL, descr, true)) {
 				ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY;
 			}
 
@@ -547,9 +564,10 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 	/* Find corresponding option descriptor */
 	descr = find_descr(descrs, '\0', long_opt_name);
 	if (!descr) {
-		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT;
+		ret = PARSE_ORIG_ARG_OPT_RET_ERROR;
 
-		if (set_error(error, long_opt_name, NULL, false)) {
+		if (set_error(error, ARGPAR_ERROR_TYPE_UNKNOWN_OPT,
+				long_opt_name, NULL, false)) {
 			ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY;
 		}
 
@@ -564,9 +582,10 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		} else {
 			/* `--long-opt arg` style */
 			if (!next_orig_arg) {
-				ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG;
+				ret = PARSE_ORIG_ARG_OPT_RET_ERROR;
 
-				if (set_error(error, NULL, descr, false)) {
+				if (set_error(error, ARGPAR_ERROR_TYPE_MISSING_OPT_ARG,
+						NULL, descr, false)) {
 					ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY;
 				}
 
@@ -581,9 +600,10 @@ enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
 		 * Unexpected `--opt=arg` style for a long option which
 		 * doesn't accept an argument.
 		 */
-		ret = PARSE_ORIG_ARG_OPT_RET_ERROR_UNEXPECTED_OPT_ARG;
+		ret = PARSE_ORIG_ARG_OPT_RET_ERROR;
 
-		if (set_error(error, NULL, descr, false)) {
+		if (set_error(error, ARGPAR_ERROR_TYPE_UNEXPECTED_OPT_ARG,
+				NULL, descr, false)) {
 			ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY;
 		}
 
@@ -735,28 +755,12 @@ enum argpar_iter_next_status argpar_iter_next(
 	case PARSE_ORIG_ARG_OPT_RET_OK:
 		status = ARGPAR_ITER_NEXT_STATUS_OK;
 		break;
-	case PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT:
-	case PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG:
-	case PARSE_ORIG_ARG_OPT_RET_ERROR_UNEXPECTED_OPT_ARG:
+	case PARSE_ORIG_ARG_OPT_RET_ERROR:
 		if (error) {
 			ARGPAR_ASSERT(*error);
 			(*nc_error)->orig_index = iter->i;
 		}
-
-		switch (parse_orig_arg_opt_ret) {
-		case PARSE_ORIG_ARG_OPT_RET_ERROR_UNKNOWN_OPT:
-			status = ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT;
-			break;
-		case PARSE_ORIG_ARG_OPT_RET_ERROR_MISSING_OPT_ARG:
-			status = ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG;
-			break;
-		case PARSE_ORIG_ARG_OPT_RET_ERROR_UNEXPECTED_OPT_ARG:
-			status = ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG;
-			break;
-		default:
-			abort();
-		}
-
+		status = ARGPAR_ITER_NEXT_STATUS_ERROR;
 		break;
 	case PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY:
 		status = ARGPAR_ITER_NEXT_STATUS_ERROR_MEMORY;

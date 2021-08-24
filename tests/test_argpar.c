@@ -528,7 +528,7 @@ void succeed_tests(void)
  */
 static
 void test_fail(const char * const cmdline,
-		const enum argpar_iter_next_status expected_status,
+		const enum argpar_error_type expected_error_type,
 		const unsigned int expected_orig_index,
 		const char * const expected_unknown_opt_name,
 		const unsigned int expected_opt_descr_index,
@@ -551,10 +551,11 @@ void test_fail(const char * const cmdline,
 		ARGPAR_ITEM_DESTROY_AND_RESET(item);
 		status = argpar_iter_next(iter, &item, &error);
 		ok(status == ARGPAR_ITER_NEXT_STATUS_OK ||
-			status == expected_status,
+			(status == ARGPAR_ITER_NEXT_STATUS_ERROR &&
+				argpar_error_type(error) == expected_error_type),
 			"argpar_iter_next() returns the expected status "
-			"(%d) for command line `%s` (call %u)",
-			status, cmdline, i + 1);
+			"and error type (%d) for command line `%s` (call %u)",
+			expected_error_type, cmdline, i + 1);
 
 		if (status != ARGPAR_ITER_NEXT_STATUS_OK) {
 			ok(!item,
@@ -576,7 +577,7 @@ void test_fail(const char * const cmdline,
 				"for command line `%s` (call %u)",
 				cmdline, i + 1);
 
-			if (status == ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT) {
+			if (argpar_error_type(error) == ARGPAR_ERROR_TYPE_UNKNOWN_OPT) {
 				ok(strcmp(argpar_error_unknown_opt_name(error),
 					expected_unknown_opt_name) == 0,
 					"argpar_iter_next() sets an error with "
@@ -643,7 +644,7 @@ void fail_tests(void)
 
 		test_fail(
 			"-d salut -e -d meow",
-			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			ARGPAR_ERROR_TYPE_UNKNOWN_OPT,
 			2, "-e", 0, false,
 			descrs);
 	}
@@ -657,7 +658,7 @@ void fail_tests(void)
 
 		test_fail(
 			"-dsalut -e -d meow",
-			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			ARGPAR_ERROR_TYPE_UNKNOWN_OPT,
 			1, "-e", 0, false,
 			descrs);
 	}
@@ -671,7 +672,7 @@ void fail_tests(void)
 
 		test_fail(
 			"--sink party --food --sink impulse",
-			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			ARGPAR_ERROR_TYPE_UNKNOWN_OPT,
 			2, "--food", 0, false,
 			descrs);
 	}
@@ -685,7 +686,7 @@ void fail_tests(void)
 
 		test_fail(
 			"--sink=party --food --sink=impulse",
-			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			ARGPAR_ERROR_TYPE_UNKNOWN_OPT,
 			1, "--food", 0, false,
 			descrs);
 	}
@@ -699,7 +700,7 @@ void fail_tests(void)
 
 		test_fail(
 			"--thumb=party --food=18 bateau --thumb waves",
-			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			ARGPAR_ERROR_TYPE_UNKNOWN_OPT,
 			1, "--food", 0, false,
 			descrs);
 	}
@@ -713,7 +714,7 @@ void fail_tests(void)
 
 		test_fail(
 			"--thumb=party wound --food --thumb waves",
-			ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
+			ARGPAR_ERROR_TYPE_UNKNOWN_OPT,
 			2, "--food", 0, false,
 			descrs);
 	}
@@ -727,7 +728,7 @@ void fail_tests(void)
 
 		test_fail(
 			"allo --thumb",
-			ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
+			ARGPAR_ERROR_TYPE_MISSING_OPT_ARG,
 			1, NULL, 0, false,
 			descrs);
 	}
@@ -741,7 +742,7 @@ void fail_tests(void)
 
 		test_fail(
 			"zoom heille -k",
-			ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
+			ARGPAR_ERROR_TYPE_MISSING_OPT_ARG,
 			2, NULL, 0, true,
 			descrs);
 	}
@@ -757,7 +758,7 @@ void fail_tests(void)
 
 		test_fail(
 			"-abc",
-			ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG,
+			ARGPAR_ERROR_TYPE_MISSING_OPT_ARG,
 			0, NULL, 2, true,
 			descrs);
 	}
@@ -771,7 +772,7 @@ void fail_tests(void)
 
 		test_fail(
 			"ambulance --chevre=fromage tar -cjv",
-			ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG,
+			ARGPAR_ERROR_TYPE_UNEXPECTED_OPT_ARG,
 			1, NULL, 0, false,
 			descrs);
 	}

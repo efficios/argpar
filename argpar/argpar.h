@@ -338,6 +338,17 @@ void argpar_item_destroy(const struct argpar_item *item);
 @{
 */
 
+enum argpar_error_type {
+	/// Unknown option error
+	ARGPAR_ERROR_TYPE_UNKNOWN_OPT,
+
+	/// Missing option argument error
+	ARGPAR_ERROR_TYPE_MISSING_OPT_ARG,
+
+	/// Unexpected option argument error
+	ARGPAR_ERROR_TYPE_UNEXPECTED_OPT_ARG,
+};
+
 /*!
 @struct argpar_error
 
@@ -345,6 +356,10 @@ void argpar_item_destroy(const struct argpar_item *item);
     Opaque parsing error type
 */
 struct argpar_error;
+
+ARGPAR_HIDDEN
+enum argpar_error_type argpar_error_type(
+	const struct argpar_error *error);
 
 /*!
 @brief
@@ -603,14 +618,8 @@ enum argpar_iter_next_status {
 	/// End of iteration (no more original arguments to parse)
 	ARGPAR_ITER_NEXT_STATUS_END,
 
-	/// Unknown option error
-	ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT = -1,
-
-	/// Missing option argument error
-	ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG = -2,
-
-	/// Unexpected option argument error
-	ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPT_ARG = -3,
+	/// Argument error
+	ARGPAR_ITER_NEXT_STATUS_ERROR = -1,
 
 	/// Memory error
 	ARGPAR_ITER_NEXT_STATUS_ERROR_MEMORY = -12,
