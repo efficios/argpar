@@ -83,7 +83,8 @@ A parsing item (the result of argpar_iter_next()) has the type
 #argpar_item.
 
 Get the type (option or non-option) of an item with
-argpar_item_type(). Each item type has its set of dedicated functions
+\link argpar_item_type(const struct argpar_item *) argpar_item_type()\endlink.
+Each item type has its set of dedicated functions
 (\c argpar_item_opt_ and \c argpar_item_non_opt_ prefixes).
 
 argpar_iter_next() produces the items in the same order that it parses
@@ -128,7 +129,8 @@ struct argpar_opt_descr;
 
 /*!
 @brief
-    Type of a parsing item, as returned by argpar_item_type().
+    Type of a parsing item, as returned by
+    \link argpar_item_type(const struct argpar_item *) argpar_item_type()\endlink.
 */
 enum argpar_item_type {
 	/// Option
@@ -338,6 +340,11 @@ void argpar_item_destroy(const struct argpar_item *item);
 @{
 */
 
+/*!
+@brief
+    Parsing error type, as returned by
+    \link argpar_error_type(const struct argpar_error *) argpar_error_type()\endlink.
+*/
 enum argpar_error_type {
 	/// Unknown option error
 	ARGPAR_ERROR_TYPE_UNKNOWN_OPT,
@@ -357,9 +364,23 @@ enum argpar_error_type {
 */
 struct argpar_error;
 
+/*!
+@brief
+    Returns the type of the parsing error object \p error.
+
+@param[in] error
+    Parsing error of which to get the type.
+
+@returns
+    Type of \p error.
+
+@pre
+    \p error is not \c NULL.
+*/
+/// @cond hidden_macro
 ARGPAR_HIDDEN
-enum argpar_error_type argpar_error_type(
-	const struct argpar_error *error);
+/// @endcond
+enum argpar_error_type argpar_error_type(const struct argpar_error *error);
 
 /*!
 @brief
@@ -393,9 +414,6 @@ With the long option with argument form, for example
 <code>\--mireille=deyglun</code>, this function only returns the name
 part (<code>\--mireille</code> in the last example).
 
-You may only call this function if the call to argpar_iter_next() which
-set \p error returned #ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT.
-
 @param[in] error
     Parsing error of which to get the name of the unknown option.
 
@@ -405,8 +423,9 @@ set \p error returned #ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT.
 @pre
     \p error is not \c NULL.
 @pre
-    The call to argpar_iter_next() which set \p error returned
-    #ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT.
+    The type of \p error, as returned by
+    \link argpar_error_type(const struct argpar_error *) argpar_error_type()\endlink,
+    is #ARGPAR_ERROR_TYPE_UNKNOWN_OPT.
 */
 /// @cond hidden_macro
 ARGPAR_HIDDEN
@@ -417,10 +436,6 @@ const char *argpar_error_unknown_opt_name(const struct argpar_error *error);
 @brief
     Returns the descriptor of the option for which the parsing error
     described by \p error occurred.
-
-You may only call this function if the call to argpar_iter_next() which
-set \p error returned #ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG or
-#ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPG_ARG.
 
 @param[in] error
     Parsing error of which to get the option descriptor.
@@ -441,9 +456,10 @@ set \p error returned #ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG or
 @pre
     \p error is not \c NULL.
 @pre
-    The call to argpar_iter_next() which set \p error returned
-    #ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG or
-    #ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPG_ARG.
+    The type of \p error, as returned by
+    \link argpar_error_type(const struct argpar_error *) argpar_error_type()\endlink,
+    is #ARGPAR_ERROR_TYPE_MISSING_OPT_ARG or
+    #ARGPAR_ERROR_TYPE_UNEXPECTED_OPT_ARG.
 */
 /// @cond hidden_macro
 ARGPAR_HIDDEN
@@ -618,7 +634,7 @@ enum argpar_iter_next_status {
 	/// End of iteration (no more original arguments to parse)
 	ARGPAR_ITER_NEXT_STATUS_END,
 
-	/// Argument error
+	/// Parsing error
 	ARGPAR_ITER_NEXT_STATUS_ERROR = -1,
 
 	/// Memory error
@@ -643,12 +659,9 @@ If there are no more original arguments to parse, this function returns
     @endparblock
 @param[out] error
     @parblock
-    When this function returns
-    #ARGPAR_ITER_NEXT_STATUS_ERROR_UNKNOWN_OPT,
-    #ARGPAR_ITER_NEXT_STATUS_ERROR_MISSING_OPT_ARG, or
-    #ARGPAR_ITER_NEXT_STATUS_ERROR_UNEXPECTED_OPG_ARG, if this parameter
-    is not \c NULL,
-    \p *error contains details about the error.
+    When this function returns #ARGPAR_ITER_NEXT_STATUS_ERROR,
+    if this parameter is not \c NULL, \p *error contains details about
+    the error.
 
     Destroy \p *error with argpar_error_destroy().
     @endparblock
