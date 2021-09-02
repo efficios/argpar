@@ -10,6 +10,10 @@
 
 #include <stdbool.h>
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 /*!
 @mainpage
 
@@ -711,5 +715,9 @@ unsigned int argpar_iter_ingested_orig_args(const struct argpar_iter *iter);
 /// @}
 
 /// @}
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /* ARGPAR_ARGPAR_H */
