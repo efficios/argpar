@@ -1,10 +1,10 @@
 AC_INIT([argpar], [0.1.0])
+AC_USE_SYSTEM_EXTENSIONS
+
 AM_INIT_AUTOMAKE([foreign])
 LT_INIT
 
 AC_CONFIG_MACRO_DIRS([m4])
-
-AC_USE_SYSTEM_EXTENSIONS
 
 # Depend on glib just for the tests.
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
