@@ -28,5 +28,5 @@ missing
 test-driver
 Makefile
 Makefile.in
-tests/test_argpar
+tests/test-argpar
 Doxyfile
