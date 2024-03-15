@@ -32,9 +32,9 @@
  *
  * This function:
  *
- * * Prefers the `--long-opt=arg` style over the `-s arg` style.
+ * ‣ Prefers the `--long-opt=arg` style over the `-s arg` style.
  *
- * * Uses the `arg<A,B>` form for non-option arguments, where `A` is the
+ * ‣ Uses the `arg<A,B>` form for non-option arguments, where `A` is the
  *   original argument index and `B` is the non-option argument index.
  */
 static
@@ -512,16 +512,16 @@ void succeed_tests(void)
  * `descrs`, and ensures that argpar_iter_next() fails with status
  * `expected_status` and that it sets an error having:
  *
- * * The original argument index `expected_orig_index`.
+ * ‣ The original argument index `expected_orig_index`.
  *
- * * If applicable:
+ * ‣ If applicable:
  *
- *   * The unknown option name `expected_unknown_opt_name`.
+ *   • The unknown option name `expected_unknown_opt_name`.
  *
- *   * The option descriptor at index `expected_opt_descr_index` of
+ *   • The option descriptor at index `expected_opt_descr_index` of
  *     `descrs`.
  *
- *   * The option type `expected_is_short`.
+ *   • The option type `expected_is_short`.
  *
  * This function splits `cmdline` on spaces to create an original
  * argument array.
