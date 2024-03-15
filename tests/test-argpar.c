@@ -39,7 +39,7 @@
  */
 static
 void append_to_res_str(GString * const res_str,
-		const struct argpar_item * const item)
+		const argpar_item_t * const item)
 {
 	if (res_str->len > 0) {
 		g_string_append_c(res_str, ' ');
@@ -48,7 +48,7 @@ void append_to_res_str(GString * const res_str,
 	switch (argpar_item_type(item)) {
 	case ARGPAR_ITEM_TYPE_OPT:
 	{
-		const struct argpar_opt_descr * const descr =
+		const argpar_opt_descr_t * const descr =
 			argpar_item_opt_descr(item);
 		const char * const arg = argpar_item_opt_arg(item);
 
@@ -102,12 +102,12 @@ void append_to_res_str(GString * const res_str,
 static
 void test_succeed(const char * const cmdline,
 		const char * const expected_cmd_line,
-		const struct argpar_opt_descr * const descrs,
+		const argpar_opt_descr_t * const descrs,
 		const unsigned int expected_ingested_orig_args)
 {
-	struct argpar_iter *iter = NULL;
-	const struct argpar_item *item = NULL;
-	const struct argpar_error *error = NULL;
+	argpar_iter_t *iter = NULL;
+	const argpar_item_t *item = NULL;
+	const argpar_error_t *error = NULL;
 	GString * const res_str = g_string_new(NULL);
 	gchar ** const argv = g_strsplit(cmdline, " ", 0);
 	unsigned int i, actual_ingested_orig_args;
@@ -119,7 +119,7 @@ void test_succeed(const char * const cmdline,
 	assert(iter);
 
 	for (i = 0; ; i++) {
-		enum argpar_iter_next_status status;
+		argpar_iter_next_status_t status;
 
 		ARGPAR_ITEM_DESTROY_AND_RESET(item);
 		status = argpar_iter_next(iter, &item, &error);
@@ -178,7 +178,7 @@ void succeed_tests(void)
 {
 	/* No arguments */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
@@ -190,7 +190,7 @@ void succeed_tests(void)
 
 	/* Single long option */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, '\0', "salut", false },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -203,7 +203,7 @@ void succeed_tests(void)
 
 	/* Single short option */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'f', NULL, false },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -216,7 +216,7 @@ void succeed_tests(void)
 
 	/* Short and long option (aliases) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'f', "flaw", false },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -229,7 +229,7 @@ void succeed_tests(void)
 
 	/* Long option with argument (space form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, '\0', "tooth", true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -242,7 +242,7 @@ void succeed_tests(void)
 
 	/* Long option with argument (equal form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, '\0', "polish", true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -255,7 +255,7 @@ void succeed_tests(void)
 
 	/* Short option with argument (space form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'c', NULL, true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -268,7 +268,7 @@ void succeed_tests(void)
 
 	/* Short option with argument (glued form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'c', NULL, true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -281,7 +281,7 @@ void succeed_tests(void)
 
 	/* Short and long option (aliases) with argument (all forms) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'd', "dry", true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -294,7 +294,7 @@ void succeed_tests(void)
 
 	/* Many short options, last one with argument (glued form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'd', NULL, false },
 			{ 0, 'e', NULL, false },
 			{ 0, 'f', NULL, true },
@@ -309,7 +309,7 @@ void succeed_tests(void)
 
 	/* Many options */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'd', NULL, false },
 			{ 0, 'e', "east", true },
 			{ 0, '\0', "mind", false },
@@ -324,7 +324,7 @@ void succeed_tests(void)
 
 	/* Single non-option argument */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
@@ -336,7 +336,7 @@ void succeed_tests(void)
 
 	/* Two non-option arguments */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
 
@@ -348,7 +348,7 @@ void succeed_tests(void)
 
 	/* Single non-option argument mixed with options */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'd', NULL, false },
 			{ 0, '\0', "squeeze", true },
 			ARGPAR_OPT_DESCR_SENTINEL
@@ -362,7 +362,7 @@ void succeed_tests(void)
 
 	/* Valid `---opt` */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, '\0', "-fuel", true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -375,7 +375,7 @@ void succeed_tests(void)
 
 	/* Long option containing `=` in argument (equal form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, '\0', "zebra", true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -388,7 +388,7 @@ void succeed_tests(void)
 
 	/* Short option's argument starting with `-` (glued form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'z', NULL, true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -401,7 +401,7 @@ void succeed_tests(void)
 
 	/* Short option's argument starting with `-` (space form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'z', NULL, true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -414,7 +414,7 @@ void succeed_tests(void)
 
 	/* Long option's argument starting with `-` (space form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, '\0', "janine", true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -427,7 +427,7 @@ void succeed_tests(void)
 
 	/* Long option's argument starting with `-` (equal form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, '\0', "janine", true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -440,7 +440,7 @@ void succeed_tests(void)
 
 	/* Long option's empty argument (equal form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'f', NULL, false },
 			{ 0, '\0', "yeah", true },
 			ARGPAR_OPT_DESCR_SENTINEL
@@ -454,7 +454,7 @@ void succeed_tests(void)
 
 	/* `-` non-option argument */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'f', NULL, false },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -467,7 +467,7 @@ void succeed_tests(void)
 
 	/* `--` non-option argument */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'f', NULL, false },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -496,7 +496,7 @@ void succeed_tests(void)
 			"cornhole-cliche-tattooed-green-juice-adaptogen-"
 			"kitsch-lo-fi-vexillologist-migas-gentrify-"
 			"viral-raw-denim";
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, '\0', opt_name, true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -528,25 +528,25 @@ void succeed_tests(void)
  */
 static
 void test_fail(const char * const cmdline,
-		const enum argpar_error_type expected_error_type,
+		const argpar_error_type_t expected_error_type,
 		const unsigned int expected_orig_index,
 		const char * const expected_unknown_opt_name,
 		const unsigned int expected_opt_descr_index,
 		const bool expected_is_short,
-		const struct argpar_opt_descr * const descrs)
+		const argpar_opt_descr_t * const descrs)
 {
-	struct argpar_iter *iter = NULL;
-	const struct argpar_item *item = NULL;
+	argpar_iter_t *iter = NULL;
+	const argpar_item_t *item = NULL;
 	gchar ** const argv = g_strsplit(cmdline, " ", 0);
 	unsigned int i;
-	const struct argpar_error *error = NULL;
+	const argpar_error_t *error = NULL;
 
 	iter = argpar_iter_create(g_strv_length(argv),
 		(const char * const *) argv, descrs);
 	assert(iter);
 
 	for (i = 0; ; i++) {
-		enum argpar_iter_next_status status;
+		argpar_iter_next_status_t status;
 
 		ARGPAR_ITEM_DESTROY_AND_RESET(item);
 		status = argpar_iter_next(iter, &item, &error);
@@ -637,7 +637,7 @@ void fail_tests(void)
 
 	/* Unknown short option (space form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'd', NULL, true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -651,7 +651,7 @@ void fail_tests(void)
 
 	/* Unknown short option (glued form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'd', 0, true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -665,7 +665,7 @@ void fail_tests(void)
 
 	/* Unknown long option (space form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, '\0', "sink", true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -679,7 +679,7 @@ void fail_tests(void)
 
 	/* Unknown long option (equal form) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, '\0', "sink", true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -693,7 +693,7 @@ void fail_tests(void)
 
 	/* Unknown option before non-option argument */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, '\0', "thumb", true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -707,7 +707,7 @@ void fail_tests(void)
 
 	/* Unknown option after non-option argument */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, '\0', "thumb", true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -721,7 +721,7 @@ void fail_tests(void)
 
 	/* Missing long option argument */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, '\0', "thumb", true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -735,7 +735,7 @@ void fail_tests(void)
 
 	/* Missing short option argument */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'k', NULL, true },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};
@@ -749,7 +749,7 @@ void fail_tests(void)
 
 	/* Missing short option argument (multiple glued) */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'a', NULL, false },
 			{ 0, 'b', NULL, false },
 			{ 0, 'c', NULL, true },
@@ -765,7 +765,7 @@ void fail_tests(void)
 
 	/* Unexpected long option argument */
 	{
-		const struct argpar_opt_descr descrs[] = {
+		const argpar_opt_descr_t descrs[] = {
 			{ 0, 'c', "chevre", false },
 			ARGPAR_OPT_DESCR_SENTINEL
 		};

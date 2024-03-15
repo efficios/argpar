@@ -46,7 +46,7 @@ struct argpar_iter {
 	struct {
 		unsigned int argc;
 		const char * const *argv;
-		const struct argpar_opt_descr *descrs;
+		const argpar_opt_descr_t *descrs;
 	} user;
 
 	/*
@@ -75,23 +75,23 @@ struct argpar_iter {
 
 /* Base parsing item */
 struct argpar_item {
-	enum argpar_item_type type;
+	argpar_item_type_t type;
 };
 
 /* Option parsing item */
-struct argpar_item_opt {
-	struct argpar_item base;
+typedef struct argpar_item_opt {
+	argpar_item_t base;
 
 	/* Corresponding descriptor */
-	const struct argpar_opt_descr *descr;
+	const argpar_opt_descr_t *descr;
 
 	/* Argument, or `NULL` if none; owned by this */
 	char *arg;
-};
+} argpar_item_opt_t;
 
 /* Non-option parsing item */
-struct argpar_item_non_opt {
-	struct argpar_item base;
+typedef struct argpar_item_non_opt {
+	argpar_item_t base;
 
 	/*
 	 * Complete argument, pointing to one of the entries of the
@@ -107,12 +107,12 @@ struct argpar_item_non_opt {
 
 	/* Index of this argument amongst other non-option arguments */
 	unsigned int non_opt_index;
-};
+} argpar_item_non_opt_t;
 
 /* Parsing error */
 struct argpar_error {
 	/* Error type */
-	enum argpar_error_type type;
+	argpar_error_type_t type;
 
 	/* Original argument index */
 	unsigned int orig_index;
@@ -121,72 +121,71 @@ struct argpar_error {
 	char *unknown_opt_name;
 
 	/* Option descriptor */
-	const struct argpar_opt_descr *opt_descr;
+	const argpar_opt_descr_t *opt_descr;
 
 	/* `true` if a short option caused the error */
 	bool is_short;
 };
 
 ARGPAR_HIDDEN
-enum argpar_item_type argpar_item_type(const struct argpar_item * const item)
+argpar_item_type_t argpar_item_type(const argpar_item_t * const item)
 {
 	ARGPAR_ASSERT(item);
 	return item->type;
 }
 
 ARGPAR_HIDDEN
-const struct argpar_opt_descr *argpar_item_opt_descr(
-		const struct argpar_item * const item)
+const argpar_opt_descr_t *argpar_item_opt_descr(
+		const argpar_item_t * const item)
 {
 	ARGPAR_ASSERT(item);
 	ARGPAR_ASSERT(item->type == ARGPAR_ITEM_TYPE_OPT);
-	return ((const struct argpar_item_opt *) item)->descr;
+	return ((const argpar_item_opt_t *) item)->descr;
 }
 
 ARGPAR_HIDDEN
-const char *argpar_item_opt_arg(const struct argpar_item * const item)
+const char *argpar_item_opt_arg(const argpar_item_t * const item)
 {
 	ARGPAR_ASSERT(item);
 	ARGPAR_ASSERT(item->type == ARGPAR_ITEM_TYPE_OPT);
-	return ((const struct argpar_item_opt *) item)->arg;
+	return ((const argpar_item_opt_t *) item)->arg;
 }
 
 ARGPAR_HIDDEN
-const char *argpar_item_non_opt_arg(const struct argpar_item * const item)
+const char *argpar_item_non_opt_arg(const argpar_item_t * const item)
 {
 	ARGPAR_ASSERT(item);
 	ARGPAR_ASSERT(item->type == ARGPAR_ITEM_TYPE_NON_OPT);
-	return ((const struct argpar_item_non_opt *) item)->arg;
+	return ((const argpar_item_non_opt_t *) item)->arg;
 }
 
 ARGPAR_HIDDEN
 unsigned int argpar_item_non_opt_orig_index(
-		const struct argpar_item * const item)
+		const argpar_item_t * const item)
 {
 	ARGPAR_ASSERT(item);
 	ARGPAR_ASSERT(item->type == ARGPAR_ITEM_TYPE_NON_OPT);
-	return ((const struct argpar_item_non_opt *) item)->orig_index;
+	return ((const argpar_item_non_opt_t *) item)->orig_index;
 }
 
 ARGPAR_HIDDEN
 unsigned int argpar_item_non_opt_non_opt_index(
-		const struct argpar_item * const item)
+		const argpar_item_t * const item)
 {
 	ARGPAR_ASSERT(item);
 	ARGPAR_ASSERT(item->type == ARGPAR_ITEM_TYPE_NON_OPT);
-	return ((const struct argpar_item_non_opt *) item)->non_opt_index;
+	return ((const argpar_item_non_opt_t *) item)->non_opt_index;
 }
 
 ARGPAR_HIDDEN
-void argpar_item_destroy(const struct argpar_item * const item)
+void argpar_item_destroy(const argpar_item_t * const item)
 {
 	if (!item) {
 		goto end;
 	}
 
 	if (item->type == ARGPAR_ITEM_TYPE_OPT) {
-		struct argpar_item_opt * const opt_item =
-			(struct argpar_item_opt *) item;
+		argpar_item_opt_t * const opt_item = (argpar_item_opt_t *) item;
 
 		free(opt_item->arg);
 	}
@@ -204,12 +203,10 @@ end:
  * Returns `NULL` on memory error.
  */
 static
-struct argpar_item_opt *create_opt_item(
-		const struct argpar_opt_descr * const descr,
+argpar_item_opt_t *create_opt_item(const argpar_opt_descr_t * const descr,
 		const char * const arg)
 {
-	struct argpar_item_opt *opt_item =
-		ARGPAR_ZALLOC(struct argpar_item_opt);
+	argpar_item_opt_t *opt_item = ARGPAR_ZALLOC(argpar_item_opt_t);
 
 	if (!opt_item) {
 		goto end;
@@ -243,12 +240,12 @@ end:
  * Returns `NULL` on memory error.
  */
 static
-struct argpar_item_non_opt *create_non_opt_item(const char * const arg,
+argpar_item_non_opt_t *create_non_opt_item(const char * const arg,
 		const unsigned int orig_index,
 		const unsigned int non_opt_index)
 {
-	struct argpar_item_non_opt * const non_opt_item =
-		ARGPAR_ZALLOC(struct argpar_item_non_opt);
+	argpar_item_non_opt_t * const non_opt_item =
+		ARGPAR_ZALLOC(argpar_item_non_opt_t);
 
 	if (!non_opt_item) {
 		goto end;
@@ -275,11 +272,9 @@ end:
  * error.
  */
 static
-int set_error(struct argpar_error ** const error,
-		enum argpar_error_type type,
+int set_error(argpar_error_t ** const error, argpar_error_type_t type,
 		const char * const unknown_opt_name,
-		const struct argpar_opt_descr * const opt_descr,
-		const bool is_short)
+		const argpar_opt_descr_t * const opt_descr, const bool is_short)
 {
 	int ret = 0;
 
@@ -287,7 +282,7 @@ int set_error(struct argpar_error ** const error,
 		goto end;
 	}
 
-	*error = ARGPAR_ZALLOC(struct argpar_error);
+	*error = ARGPAR_ZALLOC(argpar_error_t);
 	if (!*error) {
 		goto error;
 	}
@@ -323,15 +318,15 @@ end:
 }
 
 ARGPAR_HIDDEN
-enum argpar_error_type argpar_error_type(
-		const struct argpar_error * const error)
+argpar_error_type_t argpar_error_type(
+		const argpar_error_t * const error)
 {
 	ARGPAR_ASSERT(error);
 	return error->type;
 }
 
 ARGPAR_HIDDEN
-unsigned int argpar_error_orig_index(const struct argpar_error * const error)
+unsigned int argpar_error_orig_index(const argpar_error_t * const error)
 {
 	ARGPAR_ASSERT(error);
 	return error->orig_index;
@@ -339,7 +334,7 @@ unsigned int argpar_error_orig_index(const struct argpar_error * const error)
 
 ARGPAR_HIDDEN
 const char *argpar_error_unknown_opt_name(
-		const struct argpar_error * const error)
+		const argpar_error_t * const error)
 {
 	ARGPAR_ASSERT(error);
 	ARGPAR_ASSERT(error->type == ARGPAR_ERROR_TYPE_UNKNOWN_OPT);
@@ -348,8 +343,8 @@ const char *argpar_error_unknown_opt_name(
 }
 
 ARGPAR_HIDDEN
-const struct argpar_opt_descr *argpar_error_opt_descr(
-		const struct argpar_error * const error, bool * const is_short)
+const argpar_opt_descr_t *argpar_error_opt_descr(
+		const argpar_error_t * const error, bool * const is_short)
 {
 	ARGPAR_ASSERT(error);
 	ARGPAR_ASSERT(error->type == ARGPAR_ERROR_TYPE_MISSING_OPT_ARG ||
@@ -364,7 +359,7 @@ const struct argpar_opt_descr *argpar_error_opt_descr(
 }
 
 ARGPAR_HIDDEN
-void argpar_error_destroy(const struct argpar_error * const error)
+void argpar_error_destroy(const argpar_error_t * const error)
 {
 	if (error) {
 		free(error->unknown_opt_name);
@@ -384,11 +379,10 @@ void argpar_error_destroy(const struct argpar_error * const error)
  * Returns `NULL` if no descriptor is found.
  */
 static
-const struct argpar_opt_descr *find_descr(
-		const struct argpar_opt_descr * const descrs,
+const argpar_opt_descr_t *find_descr(const argpar_opt_descr_t * const descrs,
 		const char short_name, const char * const long_name)
 {
-	const struct argpar_opt_descr *descr;
+	const argpar_opt_descr_t *descr;
 
 	for (descr = descrs; descr->short_name || descr->long_name; descr++) {
 		if (short_name && descr->short_name &&
@@ -407,11 +401,11 @@ end:
 }
 
 /* Return type of parse_short_opt_group() and parse_long_opt() */
-enum parse_orig_arg_opt_ret {
+typedef enum parse_orig_arg_opt_ret {
 	PARSE_ORIG_ARG_OPT_RET_OK,
 	PARSE_ORIG_ARG_OPT_RET_ERROR = -1,
 	PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY = -2,
-};
+} parse_orig_arg_opt_ret_t;
 
 /*
  * Parses the short option group argument `short_opt_group`, starting
@@ -423,19 +417,18 @@ enum parse_orig_arg_opt_ret {
  * `*error`.
  */
 static
-enum parse_orig_arg_opt_ret parse_short_opt_group(
+parse_orig_arg_opt_ret_t parse_short_opt_group(
 		const char * const short_opt_group,
 		const char * const next_orig_arg,
-		const struct argpar_opt_descr * const descrs,
-		struct argpar_iter * const iter,
-		struct argpar_error ** const error,
-		struct argpar_item ** const item)
+		const argpar_opt_descr_t * const descrs,
+		argpar_iter_t * const iter, argpar_error_t ** const error,
+		argpar_item_t ** const item)
 {
-	enum parse_orig_arg_opt_ret ret = PARSE_ORIG_ARG_OPT_RET_OK;
+	parse_orig_arg_opt_ret_t ret = PARSE_ORIG_ARG_OPT_RET_OK;
 	bool used_next_orig_arg = false;
 	const char *opt_arg = NULL;
-	const struct argpar_opt_descr *descr;
-	struct argpar_item_opt *opt_item;
+	const argpar_opt_descr_t *descr;
+	argpar_item_opt_t *opt_item;
 
 	ARGPAR_ASSERT(strlen(short_opt_group) != 0);
 
@@ -525,16 +518,15 @@ end:
  * `*error`.
  */
 static
-enum parse_orig_arg_opt_ret parse_long_opt(const char * const long_opt_arg,
+parse_orig_arg_opt_ret_t parse_long_opt(const char * const long_opt_arg,
 		const char * const next_orig_arg,
-		const struct argpar_opt_descr * const descrs,
-		struct argpar_iter * const iter,
-		struct argpar_error ** const error,
-		struct argpar_item ** const item)
+		const argpar_opt_descr_t * const descrs,
+		argpar_iter_t * const iter, argpar_error_t ** const error,
+		argpar_item_t ** const item)
 {
-	enum parse_orig_arg_opt_ret ret = PARSE_ORIG_ARG_OPT_RET_OK;
-	const struct argpar_opt_descr *descr;
-	struct argpar_item_opt *opt_item;
+	parse_orig_arg_opt_ret_t ret = PARSE_ORIG_ARG_OPT_RET_OK;
+	const argpar_opt_descr_t *descr;
+	argpar_item_opt_t *opt_item;
 	bool used_next_orig_arg = false;
 
 	/* Option's argument, if any */
@@ -649,36 +641,35 @@ end:
  * `*error`.
  */
 static
-enum parse_orig_arg_opt_ret parse_orig_arg_opt(const char * const orig_arg,
+parse_orig_arg_opt_ret_t parse_orig_arg_opt(const char * const orig_arg,
 		const char * const next_orig_arg,
-		const struct argpar_opt_descr * const descrs,
-		struct argpar_iter * const iter,
-		struct argpar_error ** const error,
-		struct argpar_item ** const item)
+		const argpar_opt_descr_t * const descrs,
+		argpar_iter_t * const iter, argpar_error_t ** const error,
+		argpar_item_t ** const item)
 {
-	enum parse_orig_arg_opt_ret ret = PARSE_ORIG_ARG_OPT_RET_OK;
+	parse_orig_arg_opt_ret_t ret = PARSE_ORIG_ARG_OPT_RET_OK;
 
 	ARGPAR_ASSERT(orig_arg[0] == '-');
 
 	if (orig_arg[1] == '-') {
 		/* Long option */
-		ret = parse_long_opt(&orig_arg[2],
-			next_orig_arg, descrs, iter, error, item);
+		ret = parse_long_opt(&orig_arg[2], next_orig_arg, descrs, iter,
+			error, item);
 	} else {
 		/* Short option */
-		ret = parse_short_opt_group(&orig_arg[1],
-			next_orig_arg, descrs, iter, error, item);
+		ret = parse_short_opt_group(&orig_arg[1], next_orig_arg, descrs,
+			iter, error, item);
 	}
 
 	return ret;
 }
 
 ARGPAR_HIDDEN
-struct argpar_iter *argpar_iter_create(const unsigned int argc,
+argpar_iter_t *argpar_iter_create(const unsigned int argc,
 		const char * const * const argv,
-		const struct argpar_opt_descr * const descrs)
+		const argpar_opt_descr_t * const descrs)
 {
-	struct argpar_iter *iter = ARGPAR_ZALLOC(struct argpar_iter);
+	argpar_iter_t *iter = ARGPAR_ZALLOC(argpar_iter_t);
 
 	if (!iter) {
 		goto end;
@@ -700,7 +691,7 @@ end:
 }
 
 ARGPAR_HIDDEN
-void argpar_iter_destroy(struct argpar_iter * const iter)
+void argpar_iter_destroy(argpar_iter_t * const iter)
 {
 	if (iter) {
 		free(iter->tmp_buf.data);
@@ -709,16 +700,15 @@ void argpar_iter_destroy(struct argpar_iter * const iter)
 }
 
 ARGPAR_HIDDEN
-enum argpar_iter_next_status argpar_iter_next(
-		struct argpar_iter * const iter,
-		const struct argpar_item ** const item,
-		const struct argpar_error ** const error)
+argpar_iter_next_status_t argpar_iter_next(argpar_iter_t * const iter,
+		const argpar_item_t ** const item,
+		const argpar_error_t ** const error)
 {
-	enum argpar_iter_next_status status;
-	enum parse_orig_arg_opt_ret parse_orig_arg_opt_ret;
+	argpar_iter_next_status_t status;
+	parse_orig_arg_opt_ret_t parse_orig_arg_opt_ret;
 	const char *orig_arg;
 	const char *next_orig_arg;
-	struct argpar_error ** const nc_error = (struct argpar_error **) error;
+	argpar_error_t ** const nc_error = (argpar_error_t **) error;
 
 	ARGPAR_ASSERT(iter->i <= iter->user.argc);
 
@@ -739,7 +729,7 @@ enum argpar_iter_next_status argpar_iter_next(
 	if (strcmp(orig_arg, "-") == 0 || strcmp(orig_arg, "--") == 0 ||
 			orig_arg[0] != '-') {
 		/* Non-option argument */
-		const struct argpar_item_non_opt * const non_opt_item =
+		const argpar_item_non_opt_t * const non_opt_item =
 			create_non_opt_item(orig_arg, iter->i,
 				iter->non_opt_index);
 
@@ -758,7 +748,7 @@ enum argpar_iter_next_status argpar_iter_next(
 	/* Option argument */
 	parse_orig_arg_opt_ret = parse_orig_arg_opt(orig_arg,
 		next_orig_arg, iter->user.descrs, iter, nc_error,
-		(struct argpar_item **) item);
+		(argpar_item_t **) item);
 	switch (parse_orig_arg_opt_ret) {
 	case PARSE_ORIG_ARG_OPT_RET_OK:
 		status = ARGPAR_ITER_NEXT_STATUS_OK;
@@ -782,8 +772,7 @@ end:
 }
 
 ARGPAR_HIDDEN
-unsigned int argpar_iter_ingested_orig_args(
-		const struct argpar_iter * const iter)
+unsigned int argpar_iter_ingested_orig_args(const argpar_iter_t * const iter)
 {
 	return iter->i;
 }

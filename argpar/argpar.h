@@ -87,7 +87,7 @@ A parsing item (the result of argpar_iter_next()) has the type
 #argpar_item.
 
 Get the type (option or non-option) of an item with
-\link argpar_item_type(const struct argpar_item *) argpar_item_type()\endlink.
+\link argpar_item_type(const argpar_item_t *) argpar_item_type()\endlink.
 Each item type has its set of dedicated functions
 (\c argpar_item_opt_ and \c argpar_item_non_opt_ prefixes).
 
@@ -131,7 +131,7 @@ argpar_iter_next() produces the following items, in this order:
 # define ARGPAR_NOEXCEPT
 #endif
 
-struct argpar_opt_descr;
+typedef struct argpar_opt_descr argpar_opt_descr_t;
 
 /*!
 @name Item API
@@ -141,15 +141,15 @@ struct argpar_opt_descr;
 /*!
 @brief
     Type of a parsing item, as returned by
-    \link argpar_item_type(const struct argpar_item *) argpar_item_type()\endlink.
+    \link argpar_item_type(const argpar_item *) argpar_item_type()\endlink.
 */
-enum argpar_item_type {
+typedef enum argpar_item_type {
 	/// Option
 	ARGPAR_ITEM_TYPE_OPT,
 
 	/// Non-option
 	ARGPAR_ITEM_TYPE_NON_OPT,
-};
+} argpar_item_type_t;
 
 /*!
 @struct argpar_item
@@ -159,7 +159,7 @@ enum argpar_item_type {
 
 argpar_iter_next() sets a pointer to such a type.
 */
-struct argpar_item;
+typedef struct argpar_item argpar_item_t;
 
 /*!
 @brief
@@ -177,8 +177,7 @@ struct argpar_item;
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-enum argpar_item_type argpar_item_type(
-		const struct argpar_item *item) ARGPAR_NOEXCEPT;
+argpar_item_type_t argpar_item_type(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -198,8 +197,8 @@ enum argpar_item_type argpar_item_type(
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-const struct argpar_opt_descr *argpar_item_opt_descr(
-		const struct argpar_item *item) ARGPAR_NOEXCEPT;
+const argpar_opt_descr_t *argpar_item_opt_descr(
+		const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -220,7 +219,7 @@ const struct argpar_opt_descr *argpar_item_opt_descr(
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-const char *argpar_item_opt_arg(const struct argpar_item *item) ARGPAR_NOEXCEPT;
+const char *argpar_item_opt_arg(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -244,7 +243,7 @@ const char *argpar_item_opt_arg(const struct argpar_item *item) ARGPAR_NOEXCEPT;
 ARGPAR_HIDDEN
 /// @endcond
 const char *argpar_item_non_opt_arg(
-		const struct argpar_item *item) ARGPAR_NOEXCEPT;
+		const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -281,7 +280,7 @@ argument index of \c mix is&nbsp;4.
 ARGPAR_HIDDEN
 /// @endcond
 unsigned int argpar_item_non_opt_orig_index(
-		const struct argpar_item *item) ARGPAR_NOEXCEPT;
+		const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -317,7 +316,7 @@ argument index of \c mix is&nbsp;1.
 ARGPAR_HIDDEN
 /// @endcond
 unsigned int argpar_item_non_opt_non_opt_index(
-		const struct argpar_item *item) ARGPAR_NOEXCEPT;
+		const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -329,7 +328,7 @@ unsigned int argpar_item_non_opt_non_opt_index(
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-void argpar_item_destroy(const struct argpar_item *item) ARGPAR_NOEXCEPT;
+void argpar_item_destroy(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
 @def ARGPAR_ITEM_DESTROY_AND_RESET(_item)
@@ -340,7 +339,7 @@ void argpar_item_destroy(const struct argpar_item *item) ARGPAR_NOEXCEPT;
 
 @param[in] _item
     Item to destroy and variable to reset
-    (<code>const struct argpar_item *</code> type).
+    (<code>const argpar_item_t *</code> type).
 */
 #define ARGPAR_ITEM_DESTROY_AND_RESET(_item)				\
 	{								\
@@ -358,9 +357,9 @@ void argpar_item_destroy(const struct argpar_item *item) ARGPAR_NOEXCEPT;
 /*!
 @brief
     Parsing error type, as returned by
-    \link argpar_error_type(const struct argpar_error *) argpar_error_type()\endlink.
+    \link argpar_error_type(const argpar_error_t *) argpar_error_type()\endlink.
 */
-enum argpar_error_type {
+typedef enum argpar_error_type {
 	/// Unknown option error
 	ARGPAR_ERROR_TYPE_UNKNOWN_OPT,
 
@@ -369,7 +368,7 @@ enum argpar_error_type {
 
 	/// Unexpected option argument error
 	ARGPAR_ERROR_TYPE_UNEXPECTED_OPT_ARG,
-};
+} argpar_error_type_t;
 
 /*!
 @struct argpar_error
@@ -377,7 +376,7 @@ enum argpar_error_type {
 @brief
     Opaque parsing error type
 */
-struct argpar_error;
+typedef struct argpar_error argpar_error_t;
 
 /*!
 @brief
@@ -395,8 +394,8 @@ struct argpar_error;
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-enum argpar_error_type argpar_error_type(
-		const struct argpar_error *error) ARGPAR_NOEXCEPT;
+argpar_error_type_t argpar_error_type(
+		const argpar_error_t *error) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -417,7 +416,7 @@ enum argpar_error_type argpar_error_type(
 ARGPAR_HIDDEN
 /// @endcond
 unsigned int argpar_error_orig_index(
-		const struct argpar_error *error) ARGPAR_NOEXCEPT;
+		const argpar_error_t *error) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -441,14 +440,14 @@ part (<code>\--mireille</code> in the last example).
     \p error is not \c NULL.
 @pre
     The type of \p error, as returned by
-    \link argpar_error_type(const struct argpar_error *) argpar_error_type()\endlink,
+    \link argpar_error_type(const argpar_error_t *) argpar_error_type()\endlink,
     is #ARGPAR_ERROR_TYPE_UNKNOWN_OPT.
 */
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
 const char *argpar_error_unknown_opt_name(
-		const struct argpar_error *error) ARGPAR_NOEXCEPT;
+		const argpar_error_t *error) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -475,15 +474,14 @@ const char *argpar_error_unknown_opt_name(
     \p error is not \c NULL.
 @pre
     The type of \p error, as returned by
-    \link argpar_error_type(const struct argpar_error *) argpar_error_type()\endlink,
+    \link argpar_error_type(const argpar_error_t *) argpar_error_type()\endlink,
     is #ARGPAR_ERROR_TYPE_MISSING_OPT_ARG or
     #ARGPAR_ERROR_TYPE_UNEXPECTED_OPT_ARG.
 */
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-const struct argpar_opt_descr *argpar_error_opt_descr(
-		const struct argpar_error *error,
+const argpar_opt_descr_t *argpar_error_opt_descr(const argpar_error_t *error,
 		bool *is_short) ARGPAR_NOEXCEPT;
 
 /*!
@@ -496,7 +494,7 @@ const struct argpar_opt_descr *argpar_error_opt_descr(
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-void argpar_error_destroy(const struct argpar_error *error) ARGPAR_NOEXCEPT;
+void argpar_error_destroy(const argpar_error_t *error) ARGPAR_NOEXCEPT;
 
 /// @}
 
@@ -515,7 +513,7 @@ terminated with #ARGPAR_OPT_DESCR_SENTINEL, as its \p descrs parameter.
 The typical usage is, for example:
 
 @code
-const struct argpar_opt_descr descrs[] = {
+const argpar_opt_descr_t descrs[] = {
     { 0, 'd', NULL, false },
     { 1, '\0', "squeeze", true },
     { 2, 'm', "meow", true },
@@ -523,7 +521,7 @@ const struct argpar_opt_descr descrs[] = {
 };
 @endcode
 */
-struct argpar_opt_descr {
+typedef struct argpar_opt_descr {
 	/// Numeric ID, to uniquely identify this descriptor
 	const int id;
 
@@ -535,7 +533,7 @@ struct argpar_opt_descr {
 
 	/// \c true if this option has an argument
 	const bool with_arg;
-};
+} argpar_opt_descr_t;
 
 /*!
 @brief
@@ -544,7 +542,7 @@ struct argpar_opt_descr {
 The typical usage is, for example:
 
 @code
-const struct argpar_opt_descr descrs[] = {
+const argpar_opt_descr_t descrs[] = {
     { 0, 'd', NULL, false },
     { 1, '\0', "squeeze", true },
     { 2, 'm', "meow", true },
@@ -562,7 +560,7 @@ const struct argpar_opt_descr descrs[] = {
 
 argpar_iter_create() returns a pointer to such a type.
 */
-struct argpar_iter;
+typedef struct argpar_iter argpar_iter_t;
 
 /*!
 @brief
@@ -621,9 +619,8 @@ argpar_iter_next().
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-struct argpar_iter *argpar_iter_create(unsigned int argc,
-		const char * const *argv,
-		const struct argpar_opt_descr *descrs) ARGPAR_NOEXCEPT;
+argpar_iter_t *argpar_iter_create(unsigned int argc, const char * const *argv,
+		const argpar_opt_descr_t *descrs) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -638,7 +635,7 @@ struct argpar_iter *argpar_iter_create(unsigned int argc,
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-void argpar_iter_destroy(struct argpar_iter *iter) ARGPAR_NOEXCEPT;
+void argpar_iter_destroy(argpar_iter_t *iter) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -646,7 +643,7 @@ void argpar_iter_destroy(struct argpar_iter *iter) ARGPAR_NOEXCEPT;
 
 Error status enumerators have a negative value.
 */
-enum argpar_iter_next_status {
+typedef enum argpar_iter_next_status {
 	/// Success
 	ARGPAR_ITER_NEXT_STATUS_OK,
 
@@ -658,7 +655,7 @@ enum argpar_iter_next_status {
 
 	/// Memory error
 	ARGPAR_ITER_NEXT_STATUS_ERROR_MEMORY = -12,
-};
+} argpar_iter_next_status_t;
 
 /*!
 @brief
@@ -696,9 +693,9 @@ If there are no more original arguments to parse, this function returns
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-enum argpar_iter_next_status argpar_iter_next(
-		struct argpar_iter *iter, const struct argpar_item **item,
-		const struct argpar_error **error) ARGPAR_NOEXCEPT;
+argpar_iter_next_status_t argpar_iter_next(argpar_iter_t *iter,
+		const argpar_item_t **item,
+		const argpar_error_t **error) ARGPAR_NOEXCEPT;
 
 /*
  * Returns the number of ingested elements from `argv`, as passed to
@@ -726,7 +723,7 @@ enum argpar_iter_next_status argpar_iter_next(
 ARGPAR_HIDDEN
 /// @endcond
 unsigned int argpar_iter_ingested_orig_args(
-		const struct argpar_iter *iter) ARGPAR_NOEXCEPT;
+		const argpar_iter_t *iter) ARGPAR_NOEXCEPT;
 
 /// @}
 
