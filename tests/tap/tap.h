@@ -5,8 +5,12 @@
  * Copyright (C) 2017 Jérémie Galarneau
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* '## __VA_ARGS__' is a gcc'ism. C99 doesn't allow the token pasting
-   and requires the caller to add the final comma if they've ommitted
+   and requires the caller to add the final comma if they've omitted
    the optional arguments */
 #ifdef __GNUC__
 # define ok(e, test, ...) ((e) ?					\
@@ -80,3 +84,7 @@ void todo_start(const char *, ...);
 void todo_end(void);
 
 int exit_status(void);
+
+#ifdef __cplusplus
+}
+#endif
