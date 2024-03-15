@@ -5,7 +5,6 @@
  * Copyright (c) 2020-2021 Simon Marchi <simon.marchi@efficios.com>
  */
 
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
