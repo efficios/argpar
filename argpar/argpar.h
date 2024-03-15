@@ -124,6 +124,13 @@ argpar_iter_next() produces the following items, in this order:
 # define ARGPAR_HIDDEN __attribute__((visibility("hidden")))
 #endif
 
+/* Internal: `noexcept` specifier if C++ ≥ 11 */
+#if defined(__cplusplus) && (__cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900))
+# define ARGPAR_NOEXCEPT noexcept
+#else
+# define ARGPAR_NOEXCEPT
+#endif
+
 struct argpar_opt_descr;
 
 /*!
@@ -170,7 +177,8 @@ struct argpar_item;
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-enum argpar_item_type argpar_item_type(const struct argpar_item *item);
+enum argpar_item_type argpar_item_type(
+		const struct argpar_item *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -191,7 +199,7 @@ enum argpar_item_type argpar_item_type(const struct argpar_item *item);
 ARGPAR_HIDDEN
 /// @endcond
 const struct argpar_opt_descr *argpar_item_opt_descr(
-		const struct argpar_item *item);
+		const struct argpar_item *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -212,7 +220,7 @@ const struct argpar_opt_descr *argpar_item_opt_descr(
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-const char *argpar_item_opt_arg(const struct argpar_item *item);
+const char *argpar_item_opt_arg(const struct argpar_item *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -235,7 +243,8 @@ const char *argpar_item_opt_arg(const struct argpar_item *item);
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-const char *argpar_item_non_opt_arg(const struct argpar_item *item);
+const char *argpar_item_non_opt_arg(
+		const struct argpar_item *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -271,7 +280,8 @@ argument index of \c mix is&nbsp;4.
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-unsigned int argpar_item_non_opt_orig_index(const struct argpar_item *item);
+unsigned int argpar_item_non_opt_orig_index(
+		const struct argpar_item *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -306,7 +316,8 @@ argument index of \c mix is&nbsp;1.
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-unsigned int argpar_item_non_opt_non_opt_index(const struct argpar_item *item);
+unsigned int argpar_item_non_opt_non_opt_index(
+		const struct argpar_item *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -318,7 +329,7 @@ unsigned int argpar_item_non_opt_non_opt_index(const struct argpar_item *item);
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-void argpar_item_destroy(const struct argpar_item *item);
+void argpar_item_destroy(const struct argpar_item *item) ARGPAR_NOEXCEPT;
 
 /*!
 @def ARGPAR_ITEM_DESTROY_AND_RESET(_item)
@@ -384,7 +395,8 @@ struct argpar_error;
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-enum argpar_error_type argpar_error_type(const struct argpar_error *error);
+enum argpar_error_type argpar_error_type(
+		const struct argpar_error *error) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -404,7 +416,8 @@ enum argpar_error_type argpar_error_type(const struct argpar_error *error);
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-unsigned int argpar_error_orig_index(const struct argpar_error *error);
+unsigned int argpar_error_orig_index(
+		const struct argpar_error *error) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -434,7 +447,8 @@ part (<code>\--mireille</code> in the last example).
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-const char *argpar_error_unknown_opt_name(const struct argpar_error *error);
+const char *argpar_error_unknown_opt_name(
+		const struct argpar_error *error) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -469,7 +483,8 @@ const char *argpar_error_unknown_opt_name(const struct argpar_error *error);
 ARGPAR_HIDDEN
 /// @endcond
 const struct argpar_opt_descr *argpar_error_opt_descr(
-		const struct argpar_error *error, bool *is_short);
+		const struct argpar_error *error,
+		bool *is_short) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -481,7 +496,7 @@ const struct argpar_opt_descr *argpar_error_opt_descr(
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-void argpar_error_destroy(const struct argpar_error *error);
+void argpar_error_destroy(const struct argpar_error *error) ARGPAR_NOEXCEPT;
 
 /// @}
 
@@ -608,7 +623,7 @@ ARGPAR_HIDDEN
 /// @endcond
 struct argpar_iter *argpar_iter_create(unsigned int argc,
 		const char * const *argv,
-		const struct argpar_opt_descr *descrs);
+		const struct argpar_opt_descr *descrs) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -623,7 +638,7 @@ struct argpar_iter *argpar_iter_create(unsigned int argc,
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-void argpar_iter_destroy(struct argpar_iter *iter);
+void argpar_iter_destroy(struct argpar_iter *iter) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -683,7 +698,7 @@ ARGPAR_HIDDEN
 /// @endcond
 enum argpar_iter_next_status argpar_iter_next(
 		struct argpar_iter *iter, const struct argpar_item **item,
-		const struct argpar_error **error);
+		const struct argpar_error **error) ARGPAR_NOEXCEPT;
 
 /*
  * Returns the number of ingested elements from `argv`, as passed to
@@ -710,7 +725,8 @@ enum argpar_iter_next_status argpar_iter_next(
 /// @cond hidden_macro
 ARGPAR_HIDDEN
 /// @endcond
-unsigned int argpar_iter_ingested_orig_args(const struct argpar_iter *iter);
+unsigned int argpar_iter_ingested_orig_args(
+		const struct argpar_iter *iter) ARGPAR_NOEXCEPT;
 
 /// @}
 
