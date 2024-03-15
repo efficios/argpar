@@ -1,0 +1,202 @@
+// SPDX-FileCopyrightText: 2023 Philippe Proulx <eeppeliteloop@gmail.com>
+// SPDX-License-Identifier: CC-BY-SA-4.0
+
+// Render with Asciidoctor
+
+= argpar
+15 March 2024
+:bt2: Babeltrace{nbsp}2
+ifdef::env-github[]
+:toc: macro
+endif::[]
+ifndef::env-github[]
+:toc: left
+endif::[]
+:idprefix:
+:idseparator: -
+
+**argpar**, an https://efficios.com/[EfficiOS] project, is yet another
+open-source command-line argument parser for C/{cpp} programs.
+
+ifdef::env-github[]
+toc::[]
+endif::[]
+
+== Features
+
+The most important features of argpar are:
+
+* A single MIT-licensed, independent C99 source file and its header that
+  you can copy as is into your own project.
+
+* Declarative description of expected options:
++
+[source,c]
+----
+enum my_opt_id {
+    MY_OPT_ID_DATA,
+    MY_OPT_ID_SQUEEZE,
+    MY_OPT_ID_MEOW,
+};
+
+static const struct argpar_opt_descr descrs[] = {
+    { MY_OPT_ID_DATA,    'd',  NULL,      false },
+    { MY_OPT_ID_SQUEEZE, '\0', "squeeze", true },
+    { MY_OPT_ID_MEOW,    'm',  "meow",    true },
+    ARGPAR_OPT_DESCR_SENTINEL,
+};
+----
+
+* Supports short (`-k`) and long (`--kernel`) options.
++
+Multiple short options may be concatenated, and the argument of the
+last one may be "`attached`" (`-xvfmyfile`).
++
+The argument of a long option may follow a space (`--meow{nbsp}mix`) or
+an `=` sign (`--meow=mix`).
+
+* Supports repeated options:
++
+----
+--meow=mix salut -f4 /path/to/file --meow blend -cqc
+----
+
+* Fully documented, `const`-correct C99 API based on an argument
+  iterator.
++
+The `argpar_iter_next()` function produces items in the same order that
+it parses original arguments, including non-option items. This means,
+for example, that for:
++
+----
+--hello --count=23 /path/to/file -ab --type file -- magie
+----
++
+`argpar_iter_next()` produces the following items, in this order:
+
+** Option item: `--hello`.
+** Option item: `--count` with argument `23`.
+** Non-option item: `/path/to/file`.
+** Option item: `-a`.
+** Option item: `-b`.
+** Option item: `--type` with argument `file`.
+** Non-option item: `--`.
+** Non-option item: `magie`.
+
+* On parsing error, provides a detailed error object including the index
+  of the argument (in `argv`) that caused the error as well as the name,
+  if available, of the unknown option.
+
+== Known limitations
+
+Compared to other similar open-source command-line argument parsers,
+argpar has the following known limitations:
+
+* Doesn't support abbreviated long options.
++
+For example, if your option descriptor describes `--fraction`, then
+`argpar_iter_next()` won't parse `--frac=23`: it will return an unknown
+option error instead.
+
+* Doesn't explicitly support "`end of option`" (`--`).
++
+This is valid:
++
+----
+--hello=world --meow -- mix --hut=23
+----
++
+`argpar_iter_next()` provides the `--` argument as a non-option item.
+
+* Doesn't support a non-option argument having the form of an option,
+  for example if you need to pass the exact relative path `--calorie`.
++
+In that case, you would need to pass `./--calorie`. There's no generic
+way to escape `-` as of this version. This is in part because argpar
+doesn't support "`end of option`" (`--`).
++
+As a workaround, because argpar offers an iterator API, you may:
++
+. Stop using `argpar_iter_next()` from the first `--` non-option item
+  __**ITEM**__.
+. Use `argpar_item_non_opt_orig_index()` with __**ITEM**__ to get the
+  original index __**I**__ of the first `--` within `argv` (as passed
+  to `argpar_iter_create()`).
+. Read the remaining non-option arguments from `argv`, starting at
+  __**I**__{nbsp}+{nbsp}1.
+
+* Doesn't handle the `-h`/`--help` option in a special way (doesn't show
+  some automatic usage message).
+
+* Doesn't provide direct access to the value of an option.
++
+This is because argpar offers an iterator API to support positional and
+repeated options.
+
+== Build argpar
+
+To use argpar in your own project, simply copy the `argpar/argpar.c` and
+`argpar/argpar.h` files and you're ready to go.
+
+To build this project, make sure you have
+https://docs.gtk.org/glib/[GLib]{nbsp}2 (required by the tests), and
+then:
+
+. **If you build from a Git clone**, run:
++
+[role="term"]
+----
+$ ./bootstrap
+----
++
+This generates the `configure` script and other important files.
+
+. Configure the project:
++
+[role="term"]
+----
+$ ./configure
+----
++
+See `./configure --help` for more options.
+
+. Build the project:
++
+[role="term"]
+----
+$ make
+----
+
+== Build the API documentation
+
+To build the API documentation, make sure you have
+https://www.doxygen.nl/[Doxygen], and then:
+
+* From the root of the project, run:
++
+----
+$ doxygen
+----
+
+Open `api-doc/html/index.html` with Netscape Navigator.
+
+== Run the tests
+
+To run the argpar tests:
+
+. <<build-argpar,Build the project>>.
+
+. Run the tests:
++
+[role="term"]
+----
+$ make check
+----
+
+== Community
+
+argpar uses https://review.lttng.org/admin/repos/argpar,general[Gerrit]
+for code review.
+
+To report a bug, https://github.com/efficios/argpar/issues/new[create a
+GitHub issue].
