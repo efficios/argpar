@@ -532,12 +532,16 @@ parse_long_opt(const char * const long_opt_arg, const char * const next_orig_arg
 
         /* Isolate the option name */
         while (long_opt_name_size > iter->tmp_buf.size - 1) {
-            iter->tmp_buf.size *= 2;
-            iter->tmp_buf.data = ARGPAR_REALLOC(iter->tmp_buf.data, char, iter->tmp_buf.size);
-            if (!iter->tmp_buf.data) {
+            const size_t new_size = iter->tmp_buf.size * 2;
+            char * const new_data = ARGPAR_REALLOC(iter->tmp_buf.data, char, new_size);
+
+            if (!new_data) {
                 ret = PARSE_ORIG_ARG_OPT_RET_ERROR_MEMORY;
                 goto error;
             }
+
+            iter->tmp_buf.size = new_size;
+            iter->tmp_buf.data = new_data;
         }
 
         memcpy(iter->tmp_buf.data, long_opt_arg, long_opt_name_size);

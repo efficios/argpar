@@ -307,7 +307,7 @@ void argpar_item_destroy(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 #define ARGPAR_ITEM_DESTROY_AND_RESET(_item)                                                       \
     {                                                                                              \
         argpar_item_destroy(_item);                                                                \
-        _item = NULL;                                                                              \
+        (_item) = NULL;                                                                            \
     }
 
 /// @}
