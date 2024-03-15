@@ -101,14 +101,14 @@ example, that for:
 
 argpar_iter_next() produces the following items, in this order:
 
--# Option item (<code>\--hello</code>).
--# Option item (<code>\--count</code> with argument <code>23</code>).
--# Non-option item (<code>/path/to/file</code>).
--# Option item (<code>-a</code>).
--# Option item (<code>-b</code>).
--# Option item (<code>\--type</code> with argument <code>file</code>).
--# Non-option item (<code>\--</code>).
--# Non-option item (<code>magie</code>).
+-# Option item: <code>\--hello</code>.
+-# Option item: <code>\--count</code> with argument <code>23</code>.
+-# Non-option item: <code>/path/to/file</code>.
+-# Option item: <code>-a</code>.
+-# Option item: <code>-b</code>.
+-# Option item: <code>\--type</code> with argument <code>file</code>.
+-# Non-option item: <code>\--</code>.
+-# Non-option item: <code>magie</code>.
 */
 
 /*
