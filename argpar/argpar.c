@@ -23,8 +23,8 @@
 
 #ifdef NDEBUG
 /*
- * Force usage of the assertion condition to prevent unused variable warnings
- * when `assert()` are disabled by the `NDEBUG` definition.
+ * Force usage of the assertion condition to prevent unused variable
+ * warnings when `assert()` are disabled by the `NDEBUG` definition.
  */
 # define ARGPAR_ASSERT(_cond) ((void) sizeof((void) (_cond), 0))
 #else
