@@ -113,9 +113,9 @@ argpar_iter_next() produces the following items, in this order:
 
 /* Internal: `noexcept` specifier if C++ ≥ 11 */
 #if defined(__cplusplus) && (__cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900))
-# define ARGPAR_NOEXCEPT noexcept
+#    define ARGPAR_NOEXCEPT noexcept
 #else
-# define ARGPAR_NOEXCEPT
+#    define ARGPAR_NOEXCEPT
 #endif
 
 typedef struct argpar_opt_descr argpar_opt_descr_t;
@@ -130,12 +130,13 @@ typedef struct argpar_opt_descr argpar_opt_descr_t;
     Type of a parsing item, as returned by
     \link argpar_item_type(const argpar_item *) argpar_item_type()\endlink.
 */
-typedef enum argpar_item_type {
-	/// Option
-	ARGPAR_ITEM_TYPE_OPT,
+typedef enum argpar_item_type
+{
+    /// Option
+    ARGPAR_ITEM_TYPE_OPT,
 
-	/// Non-option
-	ARGPAR_ITEM_TYPE_NON_OPT,
+    /// Non-option
+    ARGPAR_ITEM_TYPE_NON_OPT,
 } argpar_item_type_t;
 
 /*!
@@ -178,8 +179,7 @@ argpar_item_type_t argpar_item_type(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 @pre
     \p item has the type #ARGPAR_ITEM_TYPE_OPT.
 */
-const argpar_opt_descr_t *argpar_item_opt_descr(
-		const argpar_item_t *item) ARGPAR_NOEXCEPT;
+const argpar_opt_descr_t *argpar_item_opt_descr(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -217,8 +217,7 @@ const char *argpar_item_opt_arg(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 @pre
     \p item has the type #ARGPAR_ITEM_TYPE_NON_OPT.
 */
-const char *argpar_item_non_opt_arg(
-		const argpar_item_t *item) ARGPAR_NOEXCEPT;
+const char *argpar_item_non_opt_arg(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -251,8 +250,7 @@ argument index of \c mix is&nbsp;4.
     argpar_item_non_opt_non_opt_index() -- Returns the non-option index
     of a non-option parsing item.
 */
-unsigned int argpar_item_non_opt_orig_index(
-		const argpar_item_t *item) ARGPAR_NOEXCEPT;
+unsigned int argpar_item_non_opt_orig_index(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -284,8 +282,7 @@ argument index of \c mix is&nbsp;1.
     argpar_item_non_opt_orig_index() -- Returns the original argument
     index of a non-option parsing item.
 */
-unsigned int argpar_item_non_opt_non_opt_index(
-		const argpar_item_t *item) ARGPAR_NOEXCEPT;
+unsigned int argpar_item_non_opt_non_opt_index(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -307,11 +304,11 @@ void argpar_item_destroy(const argpar_item_t *item) ARGPAR_NOEXCEPT;
     Item to destroy and variable to reset
     (<code>const argpar_item_t *</code> type).
 */
-#define ARGPAR_ITEM_DESTROY_AND_RESET(_item)				\
-	{								\
-		argpar_item_destroy(_item);				\
-		_item = NULL;						\
-	}
+#define ARGPAR_ITEM_DESTROY_AND_RESET(_item)                                                       \
+    {                                                                                              \
+        argpar_item_destroy(_item);                                                                \
+        _item = NULL;                                                                              \
+    }
 
 /// @}
 
@@ -325,15 +322,16 @@ void argpar_item_destroy(const argpar_item_t *item) ARGPAR_NOEXCEPT;
     Parsing error type, as returned by
     \link argpar_error_type(const argpar_error_t *) argpar_error_type()\endlink.
 */
-typedef enum argpar_error_type {
-	/// Unknown option error
-	ARGPAR_ERROR_TYPE_UNKNOWN_OPT,
+typedef enum argpar_error_type
+{
+    /// Unknown option error
+    ARGPAR_ERROR_TYPE_UNKNOWN_OPT,
 
-	/// Missing option argument error
-	ARGPAR_ERROR_TYPE_MISSING_OPT_ARG,
+    /// Missing option argument error
+    ARGPAR_ERROR_TYPE_MISSING_OPT_ARG,
 
-	/// Unexpected option argument error
-	ARGPAR_ERROR_TYPE_UNEXPECTED_OPT_ARG,
+    /// Unexpected option argument error
+    ARGPAR_ERROR_TYPE_UNEXPECTED_OPT_ARG,
 } argpar_error_type_t;
 
 /*!
@@ -357,8 +355,7 @@ typedef struct argpar_error argpar_error_t;
 @pre
     \p error is not \c NULL.
 */
-argpar_error_type_t argpar_error_type(
-		const argpar_error_t *error) ARGPAR_NOEXCEPT;
+argpar_error_type_t argpar_error_type(const argpar_error_t *error) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -375,8 +372,7 @@ argpar_error_type_t argpar_error_type(
 @pre
     \p error is not \c NULL.
 */
-unsigned int argpar_error_orig_index(
-		const argpar_error_t *error) ARGPAR_NOEXCEPT;
+unsigned int argpar_error_orig_index(const argpar_error_t *error) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -403,8 +399,7 @@ part (<code>\--mireille</code> in the last example).
     \link argpar_error_type(const argpar_error_t *) argpar_error_type()\endlink,
     is #ARGPAR_ERROR_TYPE_UNKNOWN_OPT.
 */
-const char *argpar_error_unknown_opt_name(
-		const argpar_error_t *error) ARGPAR_NOEXCEPT;
+const char *argpar_error_unknown_opt_name(const argpar_error_t *error) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -436,7 +431,7 @@ const char *argpar_error_unknown_opt_name(
     #ARGPAR_ERROR_TYPE_UNEXPECTED_OPT_ARG.
 */
 const argpar_opt_descr_t *argpar_error_opt_descr(const argpar_error_t *error,
-		bool *is_short) ARGPAR_NOEXCEPT;
+                                                 bool *is_short) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -472,18 +467,19 @@ const argpar_opt_descr_t descrs[] = {
 };
 @endcode
 */
-typedef struct argpar_opt_descr {
-	/// Numeric ID, to uniquely identify this descriptor
-	const int id;
+typedef struct argpar_opt_descr
+{
+    /// Numeric ID, to uniquely identify this descriptor
+    const int id;
 
-	/// Short option character, or <code>'\0'</code>
-	const char short_name;
+    /// Short option character, or <code>'\0'</code>
+    const char short_name;
 
-	/// Long option name (without the <code>\--</code> prefix), or \c NULL
-	const char * const long_name;
+    /// Long option name (without the <code>\--</code> prefix), or \c NULL
+    const char * const long_name;
 
-	/// \c true if this option has an argument
-	const bool with_arg;
+    /// \c true if this option has an argument
+    const bool with_arg;
 } argpar_opt_descr_t;
 
 /*!
@@ -501,7 +497,10 @@ const argpar_opt_descr_t descrs[] = {
 };
 @endcode
 */
-#define ARGPAR_OPT_DESCR_SENTINEL	{ -1, '\0', NULL, false }
+#define ARGPAR_OPT_DESCR_SENTINEL                                                                  \
+    {                                                                                              \
+        -1, '\0', NULL, false                                                                      \
+    }
 
 /*!
 @struct argpar_iter
@@ -568,7 +567,7 @@ argpar_iter_next().
     argpar_iter_destroy() -- Destroys an argument parsing iterator.
 */
 argpar_iter_t *argpar_iter_create(unsigned int argc, const char * const *argv,
-		const argpar_opt_descr_t *descrs) ARGPAR_NOEXCEPT;
+                                  const argpar_opt_descr_t *descrs) ARGPAR_NOEXCEPT;
 
 /*!
 @brief
@@ -588,18 +587,19 @@ void argpar_iter_destroy(argpar_iter_t *iter) ARGPAR_NOEXCEPT;
 
 Error status enumerators have a negative value.
 */
-typedef enum argpar_iter_next_status {
-	/// Success
-	ARGPAR_ITER_NEXT_STATUS_OK,
+typedef enum argpar_iter_next_status
+{
+    /// Success
+    ARGPAR_ITER_NEXT_STATUS_OK,
 
-	/// End of iteration (no more original arguments to parse)
-	ARGPAR_ITER_NEXT_STATUS_END,
+    /// End of iteration (no more original arguments to parse)
+    ARGPAR_ITER_NEXT_STATUS_END,
 
-	/// Parsing error
-	ARGPAR_ITER_NEXT_STATUS_ERROR = -1,
+    /// Parsing error
+    ARGPAR_ITER_NEXT_STATUS_ERROR = -1,
 
-	/// Memory error
-	ARGPAR_ITER_NEXT_STATUS_ERROR_MEMORY = -12,
+    /// Memory error
+    ARGPAR_ITER_NEXT_STATUS_ERROR_MEMORY = -12,
 } argpar_iter_next_status_t;
 
 /*!
@@ -635,9 +635,8 @@ If there are no more original arguments to parse, this function returns
 @pre
     \p item is not \c NULL.
 */
-argpar_iter_next_status_t argpar_iter_next(argpar_iter_t *iter,
-		const argpar_item_t **item,
-		const argpar_error_t **error) ARGPAR_NOEXCEPT;
+argpar_iter_next_status_t argpar_iter_next(argpar_iter_t *iter, const argpar_item_t **item,
+                                           const argpar_error_t **error) ARGPAR_NOEXCEPT;
 
 /*
  * Returns the number of ingested elements from `argv`, as passed to
@@ -661,8 +660,7 @@ argpar_iter_next_status_t argpar_iter_next(argpar_iter_t *iter,
 @pre
     \p iter is not \c NULL.
 */
-unsigned int argpar_iter_ingested_orig_args(
-		const argpar_iter_t *iter) ARGPAR_NOEXCEPT;
+unsigned int argpar_iter_ingested_orig_args(const argpar_iter_t *iter) ARGPAR_NOEXCEPT;
 
 /// @}
 
