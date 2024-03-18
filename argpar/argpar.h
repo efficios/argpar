@@ -111,19 +111,6 @@ argpar_iter_next() produces the following items, in this order:
 -# Non-option item: <code>magie</code>.
 */
 
-/*
- * If argpar is used in some shared library, we don't want said library
- * to export its symbols, so mark them as "hidden".
- *
- * On Windows, symbols are local unless explicitly exported; see
- * <https://gcc.gnu.org/wiki/Visibility>.
- */
-#if defined(_WIN32) || defined(__CYGWIN__)
-# define ARGPAR_HIDDEN
-#else
-# define ARGPAR_HIDDEN __attribute__((visibility("hidden")))
-#endif
-
 /* Internal: `noexcept` specifier if C++ ≥ 11 */
 #if defined(__cplusplus) && (__cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900))
 # define ARGPAR_NOEXCEPT noexcept
@@ -174,9 +161,6 @@ typedef struct argpar_item argpar_item_t;
 @pre
     \p item is not \c NULL.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 argpar_item_type_t argpar_item_type(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
@@ -194,9 +178,6 @@ argpar_item_type_t argpar_item_type(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 @pre
     \p item has the type #ARGPAR_ITEM_TYPE_OPT.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 const argpar_opt_descr_t *argpar_item_opt_descr(
 		const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
@@ -216,9 +197,6 @@ const argpar_opt_descr_t *argpar_item_opt_descr(
 @pre
     \p item has the type #ARGPAR_ITEM_TYPE_OPT.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 const char *argpar_item_opt_arg(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
@@ -239,9 +217,6 @@ const char *argpar_item_opt_arg(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 @pre
     \p item has the type #ARGPAR_ITEM_TYPE_NON_OPT.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 const char *argpar_item_non_opt_arg(
 		const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
@@ -276,9 +251,6 @@ argument index of \c mix is&nbsp;4.
     argpar_item_non_opt_non_opt_index() -- Returns the non-option index
     of a non-option parsing item.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 unsigned int argpar_item_non_opt_orig_index(
 		const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
@@ -312,9 +284,6 @@ argument index of \c mix is&nbsp;1.
     argpar_item_non_opt_orig_index() -- Returns the original argument
     index of a non-option parsing item.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 unsigned int argpar_item_non_opt_non_opt_index(
 		const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
@@ -325,9 +294,6 @@ unsigned int argpar_item_non_opt_non_opt_index(
 @param[in] item
     Parsing item to destroy (may be \c NULL).
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 void argpar_item_destroy(const argpar_item_t *item) ARGPAR_NOEXCEPT;
 
 /*!
@@ -391,9 +357,6 @@ typedef struct argpar_error argpar_error_t;
 @pre
     \p error is not \c NULL.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 argpar_error_type_t argpar_error_type(
 		const argpar_error_t *error) ARGPAR_NOEXCEPT;
 
@@ -412,9 +375,6 @@ argpar_error_type_t argpar_error_type(
 @pre
     \p error is not \c NULL.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 unsigned int argpar_error_orig_index(
 		const argpar_error_t *error) ARGPAR_NOEXCEPT;
 
@@ -443,9 +403,6 @@ part (<code>\--mireille</code> in the last example).
     \link argpar_error_type(const argpar_error_t *) argpar_error_type()\endlink,
     is #ARGPAR_ERROR_TYPE_UNKNOWN_OPT.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 const char *argpar_error_unknown_opt_name(
 		const argpar_error_t *error) ARGPAR_NOEXCEPT;
 
@@ -478,9 +435,6 @@ const char *argpar_error_unknown_opt_name(
     is #ARGPAR_ERROR_TYPE_MISSING_OPT_ARG or
     #ARGPAR_ERROR_TYPE_UNEXPECTED_OPT_ARG.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 const argpar_opt_descr_t *argpar_error_opt_descr(const argpar_error_t *error,
 		bool *is_short) ARGPAR_NOEXCEPT;
 
@@ -491,9 +445,6 @@ const argpar_opt_descr_t *argpar_error_opt_descr(const argpar_error_t *error,
 @param[in] error
     Parsing error to destroy (may be \c NULL).
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 void argpar_error_destroy(const argpar_error_t *error) ARGPAR_NOEXCEPT;
 
 /// @}
@@ -616,9 +567,6 @@ argpar_iter_next().
 @sa
     argpar_iter_destroy() -- Destroys an argument parsing iterator.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 argpar_iter_t *argpar_iter_create(unsigned int argc, const char * const *argv,
 		const argpar_opt_descr_t *descrs) ARGPAR_NOEXCEPT;
 
@@ -632,9 +580,6 @@ argpar_iter_t *argpar_iter_create(unsigned int argc, const char * const *argv,
 @sa
     argpar_iter_create() -- Creates an argument parsing iterator.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 void argpar_iter_destroy(argpar_iter_t *iter) ARGPAR_NOEXCEPT;
 
 /*!
@@ -690,9 +635,6 @@ If there are no more original arguments to parse, this function returns
 @pre
     \p item is not \c NULL.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 argpar_iter_next_status_t argpar_iter_next(argpar_iter_t *iter,
 		const argpar_item_t **item,
 		const argpar_error_t **error) ARGPAR_NOEXCEPT;
@@ -719,9 +661,6 @@ argpar_iter_next_status_t argpar_iter_next(argpar_iter_t *iter,
 @pre
     \p iter is not \c NULL.
 */
-/// @cond hidden_macro
-ARGPAR_HIDDEN
-/// @endcond
 unsigned int argpar_iter_ingested_orig_args(
 		const argpar_iter_t *iter) ARGPAR_NOEXCEPT;
 

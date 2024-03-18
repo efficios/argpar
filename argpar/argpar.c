@@ -12,6 +12,19 @@
 
 #include "argpar.h"
 
+/*
+ * If argpar is used in some shared library, we don't want said library
+ * to export its symbols, so mark them as "hidden".
+ *
+ * On Windows, symbols are local unless explicitly exported; see
+ * <https://gcc.gnu.org/wiki/Visibility>.
+ */
+#if defined(_WIN32) || defined(__CYGWIN__)
+# define ARGPAR_HIDDEN
+#else
+# define ARGPAR_HIDDEN __attribute__((visibility("hidden")))
+#endif
+
 #define ARGPAR_REALLOC(_ptr, _type, _nmemb)				\
 	((_type *) realloc(_ptr, (_nmemb) * sizeof(_type)))
 
