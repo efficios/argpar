@@ -1,8 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
- *
- * Copyright (c) 2019-2021 Philippe Proulx <pproulx@efficios.com>
- * Copyright (c) 2020-2021 Simon Marchi <simon.marchi@efficios.com>
+ * SPDX-FileCopyrightText: 2019-2024 Philippe Proulx <pproulx@efficios.com>
+ * SPDX-FileCopyrightText: 2020-2024 Simon Marchi <simon.marchi@efficios.com>
  */
 
 #include <stdbool.h>

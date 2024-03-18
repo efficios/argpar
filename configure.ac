@@ -1,3 +1,6 @@
+dnl SPDX-License-Identifier: GPL-2.0-only
+dnl SPDX-FileCopyrightText: EfficiOS Inc.
+
 AC_INIT([argpar], [0.1.0])
 AC_USE_SYSTEM_EXTENSIONS
 

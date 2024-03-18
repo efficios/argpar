@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: EfficiOS Inc.
+
 PROJECT_NAME           = argpar
 PROJECT_NUMBER         = @PACKAGE_VERSION@
 PROJECT_BRIEF          = "Position-aware command-line argument parsing library"

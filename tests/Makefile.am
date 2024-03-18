@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-FileCopyrightText: EfficiOS Inc.
+
 SUBDIRS = tap
 
 AM_CPPFLAGS = \
